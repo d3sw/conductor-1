@@ -50,7 +50,8 @@ job "conductor" {
       }
 
       env {
-        WF_SERVER = "http://${NOMAD_JOB_NAME}-server.service.<TLD>:30000/api/"
+        WF_SERVICE = "${NOMAD_JOB_NAME}-server.service.<TLD>"
+        // WF_SERVER = "http://${NOMAD_JOB_NAME}-server.service.<TLD>:30000/api/"
         TLD = "<TLD>"
       }
 
@@ -115,7 +116,9 @@ job "conductor" {
         // Database settings
         db = "redis"
         workflow_dynomite_cluster_name = "${NOMAD_JOB_NAME}"
-        workflow_dynomite_cluster_hosts = "${NOMAD_JOB_NAME}-db.service.<TLD>:6379:us-east-1c"
+        // workflow_dynomite_cluster_hosts = "${NOMAD_JOB_NAME}-db.service.<TLD>:6379:us-east-1c"
+        workflow_dynomite_cluster_rackName = "us-east-1c"
+        workflow_dynomite_cluster_dnsService = "${NOMAD_JOB_NAME}-db.service.<TLD>"
 
         // Workflow settings
         workflow_namespace_prefix = "${NOMAD_JOB_NAME}.conductor"
