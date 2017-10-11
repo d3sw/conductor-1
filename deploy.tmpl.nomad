@@ -167,9 +167,7 @@ job "conductor" {
 
         network {
           mbits = 2
-          port "http" {
-            static = 30000
-          }
+          port "http" {}
         }
       }
     } // end task
