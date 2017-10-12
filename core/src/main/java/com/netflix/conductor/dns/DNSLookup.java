@@ -1,16 +1,9 @@
-package com.netflix.conductor.contribs.http;
+package com.netflix.conductor.dns;
+import org.xbill.DNS.*;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
-
-import org.xbill.DNS.Address;
-import org.xbill.DNS.Cache;
-import org.xbill.DNS.DClass;
-import org.xbill.DNS.Lookup;
-import org.xbill.DNS.Record;
-import org.xbill.DNS.SRVRecord;
-import org.xbill.DNS.TextParseException;
-import org.xbill.DNS.Type;
 
 /**
  * Created by hhwang on 6/15/2017.
@@ -29,6 +22,7 @@ public class DNSLookup {
             if (records != null) {
                 for (Record record : records) {
                     SRVRecord srv = (SRVRecord) record;
+                    System.out.println("srv = " + srv);
 
                     String hostname = srv.getTarget().toString().replaceFirst("\\.$", "");
                     InetAddress address = Address.getByName(hostname);

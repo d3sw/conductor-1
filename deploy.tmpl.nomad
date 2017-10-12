@@ -110,14 +110,16 @@ job "conductor" {
       }
 
       env {
+        TLD = "<TLD>"
         STACK = "<TLD>" // Important for redis key
         environment = "<TLD>"
+
+        // Exclude demo workflows
+        loadSample = "false"
 
         // Database settings
         db = "redis"
         workflow_dynomite_cluster_name = "${NOMAD_JOB_NAME}"
-        // workflow_dynomite_cluster_hosts = "${NOMAD_JOB_NAME}-db.service.<TLD>:6379:us-east-1c"
-        workflow_dynomite_cluster_rackName = "us-east-1c"
         workflow_dynomite_cluster_dnsService = "${NOMAD_JOB_NAME}-db.service.<TLD>"
 
         // Workflow settings
@@ -127,9 +129,9 @@ job "conductor" {
         decider_sweep_frequency_seconds = "1"
 
         // Elasticsearch settings
-        workflow_elasticsearch_url = "${NOMAD_JOB_NAME}-search.service.<TLD>:9300"
         workflow_elasticsearch_mode = "elasticsearch"
         workflow_elasticsearch_index_name = "conductor.<TLD>"
+        workflow_elasticsearch_dnsService = "${NOMAD_JOB_NAME}-search.service.<TLD>"
         workflow_elasticsearch_cluster_name = "${NOMAD_JOB_NAME}.search"
         workflow_elasticsearch_tasklog_index_name = "task_log.<TLD>"
 
@@ -142,11 +144,6 @@ job "conductor" {
         conductor_auth_url = "https://auth.dmlib.de/v1/tenant/deluxe/auth/token"
         conductor_auth_clientId = "deluxe.conductor"
         conductor_auth_clientSecret = "4ecafd6a-a3ce-45dd-bf05-85f2941413d3"
-
-        // Exclude demo workflows
-        loadSample = "false"
-        
-        TLD = "<TLD>"
       }
 
       service {
@@ -276,7 +273,7 @@ job "conductor" {
 
       service {
         name = "${JOB}-${TASK}"
-        port = "http"
+        port = "tcp"
 
         check {
           type     = "http"

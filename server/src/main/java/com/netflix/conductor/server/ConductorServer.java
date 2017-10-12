@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Guice;
 import com.google.inject.servlet.GuiceFilter;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
-import com.netflix.conductor.contribs.http.DNSLookup;
+import com.netflix.conductor.dns.DNSLookup;
 import com.netflix.conductor.core.utils.WaitUtils;
 import com.netflix.conductor.dao.es5.es.EmbeddedElasticSearch;
 import com.netflix.conductor.redis.utils.JedisMock;
@@ -100,13 +100,28 @@ public class ConductorServer {
 			String dnsService = cc.getProperty("workflow.dynomite.cluster.dnsService", null);
 			if (StringUtils.isNotEmpty(dnsService)) {
 				logger.info("Using dns lookup to setup dynomite cluster");
-				String rackName = cc.getProperty("workflow.dynomite.cluster.rackName", "us-east-1c");
+				int connectAttempts = cc.getIntProperty("workflow.dynomite.dnsLookup.attempts", 60);
+				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.dnsLookup.sleep.seconds", 1);
+
+				// Run dns lookup in the waiter wrapper
 				DNSLookup lookup = new DNSLookup();
-				DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
-				for(DNSLookup.DNSResponse response : responses.getResponses()){
-					Host host = new Host(response.getHostName(), response.getPort(), rackName, Status.Up);
-					dynoHosts.add(host);
-				}
+				WaitUtils.wait("dnsLookup(dynomite)", connectAttempts, connectSleepSecs, () -> {
+					DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
+					if (responses.getResponses() == null || responses.getResponses().length == 0)
+						throw new RuntimeException("Unable to lookup service. No records found");
+					for(DNSLookup.DNSResponse response : responses.getResponses()){
+						String hostname = response.getHostName();
+						Integer hostport = response.getPort();
+
+						logger.info("Adding {}:{} to the dynomite cluster configuration", hostname, hostport);
+						Host host = new Host(hostname, hostport, cc.getAvailabilityZone(), Status.Up);
+						dynoHosts.add(host);
+					}
+					return true;
+				});
+
+				logger.info("Dns lookup done");
+
 			} else {
 				logger.info("Using given hosts to setup dynomite cluster");
 				String hosts = cc.getProperty("workflow.dynomite.cluster.hosts", null);
@@ -242,7 +257,7 @@ public class ConductorServer {
 		server.start();
 		System.out.println("Started server on http://localhost:" + port + "/");
 		try {
-			boolean create = Boolean.getBoolean("loadSample");
+			boolean create = Boolean.parseBoolean(System.getenv("loadSample"));
 			if (create) {
 				System.out.println("Creating kitchensink workflow");
 				createKitchenSink(port);
