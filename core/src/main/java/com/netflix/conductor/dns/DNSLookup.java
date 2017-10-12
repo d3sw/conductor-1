@@ -22,7 +22,6 @@ public class DNSLookup {
             if (records != null) {
                 for (Record record : records) {
                     SRVRecord srv = (SRVRecord) record;
-                    System.out.println("srv = " + srv);
 
                     String hostname = srv.getTarget().toString().replaceFirst("\\.$", "");
                     InetAddress address = Address.getByName(hostname);
