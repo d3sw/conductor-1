@@ -108,8 +108,8 @@ public class Elasticsearch5Module extends AbstractModule {
 			});
 
 			// Start the dns service monitor
-			int monitorDelay = config.getIntProperty("workflow.elasticsearch.monitor.delay", 5);
-			int monitorPeriod = config.getIntProperty("workflow.elasticsearch.monitor.period.seconds", 1);
+			int monitorDelay = config.getIntProperty("workflow.elasticsearch.monitor.delay", 30);
+			int monitorPeriod = config.getIntProperty("workflow.elasticsearch.monitor.period.seconds", 3);
 			try {
 				Executors.newScheduledThreadPool(1)
 						.scheduleAtFixedRate(() -> this.monitor(tc, dnsService), monitorDelay, monitorPeriod, TimeUnit.SECONDS);
@@ -125,7 +125,7 @@ public class Elasticsearch5Module extends AbstractModule {
 		DNSLookup lookup = new DNSLookup();
 		DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
 		if (responses.getResponses() == null || responses.getResponses().length == 0)
-			throw new RuntimeException("Unable to lookup service. No records found");
+			throw new RuntimeException("Unable to lookup service. No records found for " + dnsService);
 
 		List<TransportAddress> addressList = new ArrayList<>(responses.getResponses().length);
 		for (DNSLookup.DNSResponse response : responses.getResponses()) {
@@ -147,10 +147,7 @@ public class Elasticsearch5Module extends AbstractModule {
 		try {
 			List<TransportAddress> current = transport.transportAddresses();
 			List<TransportAddress> resolved = lookupNodes(dnsService);
-			log.info("Current nodes=" + current + ", resolved nodes=" + resolved);
-
-//			ClusterHealthResponse health = transport.admin().cluster().prepareHealth().execute().get();
-//			log.info("Cluster health " + health);
+			log.debug("Current nodes=" + current + ", resolved nodes=" + resolved);
 
 			// Remove from the current configuration if not found in resolved
 			current.forEach(node -> {

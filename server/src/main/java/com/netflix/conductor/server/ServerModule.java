@@ -94,7 +94,7 @@ public class ServerModule extends AbstractModule {
 		bind(DynoQueueDAO.class).toInstance(queueDao);
 		bind(QueueDAO.class).to(DynoQueueDAO.class);
 		bind(IndexDAO.class).to(ElasticSearch5DAO.class);
-		
+
 		DynoProxy proxy = new DynoProxy(dynoConn);
 		bind(DynoProxy.class).toInstance(proxy);
 		

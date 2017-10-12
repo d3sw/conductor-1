@@ -3,6 +3,10 @@ job "conductor" {
   datacenters = ["us-west-2"]
   type        = "service"
 
+  meta {
+    service-class = "platform"
+  }
+
   // Define which env to deploy service in
   constraint {
     attribute = "${meta.hood}"
@@ -24,7 +28,7 @@ job "conductor" {
 
   group "ui" {
 
-    count = 1
+    count = 3
 
     # Create an individual task (unit of work). This particular
     # task utilizes a Docker container to front a web application.
@@ -51,7 +55,6 @@ job "conductor" {
 
       env {
         WF_SERVICE = "${NOMAD_JOB_NAME}-server.service.<TLD>"
-        // WF_SERVER = "http://${NOMAD_JOB_NAME}-server.service.<TLD>:30000/api/"
         TLD = "<TLD>"
       }
 
@@ -84,11 +87,11 @@ job "conductor" {
           port "http" {}
         }
       }
-    } // END task.ui
-  } // END group.conductor
+    } // end task
+  } // end group
 
   group "server" {
-    count = 1
+    count = 3
 
     task "server" {
 
@@ -111,11 +114,8 @@ job "conductor" {
 
       env {
         TLD = "<TLD>"
-        STACK = "<TLD>" // Important for redis key
+        STACK = "<TLD>"
         environment = "<TLD>"
-
-        // Exclude demo workflows
-        loadSample = "false"
 
         // Database settings
         db = "redis"
@@ -130,8 +130,8 @@ job "conductor" {
 
         // Elasticsearch settings
         workflow_elasticsearch_mode = "elasticsearch"
+        workflow_elasticsearch_dnsService = "${NOMAD_JOB_NAME}-search-tcp.service.<TLD>"
         workflow_elasticsearch_index_name = "conductor.<TLD>"
-        workflow_elasticsearch_dnsService = "${NOMAD_JOB_NAME}-search.service.<TLD>"
         workflow_elasticsearch_cluster_name = "${NOMAD_JOB_NAME}.search"
         workflow_elasticsearch_tasklog_index_name = "task_log.<TLD>"
 
@@ -144,6 +144,9 @@ job "conductor" {
         conductor_auth_url = "https://auth.dmlib.de/v1/tenant/deluxe/auth/token"
         conductor_auth_clientId = "deluxe.conductor"
         conductor_auth_clientSecret = "4ecafd6a-a3ce-45dd-bf05-85f2941413d3"
+
+        // Exclude demo workflows
+        loadSample = "false"
       }
 
       service {
@@ -159,7 +162,7 @@ job "conductor" {
       }
 
       resources {
-        cpu    = 128 # MHz
+        cpu    = 128  # MHz
         memory = 1024 # MB
 
         network {
@@ -173,6 +176,11 @@ job "conductor" {
   group "db" {
     count = 1
 
+    meta {
+      product-class = "third-party"
+      stack-role = "db"
+    }
+
     constraint {
       attribute = "${attr.platform.aws.placement.availability-zone}"
       value = "us-west-2b"
@@ -184,12 +192,12 @@ job "conductor" {
       config {
         image = "redis:3.2"
         port_map {
-          port6379 = 6379
+          tcp = 6379
         }
         volume_driver = "ebs"
         volumes = [
           "${NOMAD_JOB_NAME}.${NOMAD_TASK_NAME}:/data"
-        ]        
+        ]
         labels {
           service = "${NOMAD_JOB_NAME}"
         }
@@ -198,12 +206,12 @@ job "conductor" {
           config {
             tag = "${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}"
           }
-        }        
+        }
       }
 
       service {
         name = "${JOB}-${TASK}"
-        port = "port6379"
+        port = "tcp"
 
         check {
           type     = "tcp"
@@ -213,27 +221,33 @@ job "conductor" {
       }
 
       resources {
-        cpu    = 128 # MHz
+        cpu    = 128  # MHz
         memory = 1024 # MB
 
         network {
           mbits = 4
-          port "port6379" {
-            static = 6379
-          }
+          port "tcp" {}
         }
       }
-    }
-    // end task
-  }
-  // end group
+    } // end task
+  } // end group
 
   group "search" {
-    count = 1
+    count = 3
+
+    meta {
+      product-class = "third-party"
+      stack-role = "db"
+    }
 
     constraint {
+      operator  = "distinct_hosts"
+      value     = "true"
+    }
+
+    constraint {
+      operator  = "distinct_property"
       attribute = "${attr.platform.aws.placement.availability-zone}"
-      value = "us-west-2b"
     }
 
     task "search" {
@@ -247,8 +261,8 @@ job "conductor" {
         }
         volume_driver = "ebs"
         volumes = [
-          "${NOMAD_JOB_NAME}.${NOMAD_TASK_NAME}:/usr/share/elasticsearch/data"
-        ]        
+          "${NOMAD_JOB_NAME}.${NOMAD_TASK_NAME}.<ENV_TYPE>:/usr/share/elasticsearch/data"
+        ]
         labels {
           service = "${NOMAD_JOB_NAME}"
         }
@@ -266,14 +280,14 @@ job "conductor" {
         CLUSTER_NAME        = "${NOMAD_JOB_NAME}.${NOMAD_TASK_NAME}"
         PUBLISH_IP          = "${NOMAD_IP_tcp}"
         PUBLISH_PORT        = "${NOMAD_HOST_PORT_tcp}"
-        DISCOVERY_MIN_NODES = "1"
-        DISCOVERY_HOST      = "${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}"
+        DISCOVERY_MIN_NODES = "2"
+        DISCOVERY_HOST      = "${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}-tcp"
         DISCOVERY_WAIT      = "30s:60s"
       }
 
       service {
-        name = "${JOB}-${TASK}"
-        port = "tcp"
+        name = "${JOB}-${TASK}-http"
+        port = "http"
 
         check {
           type     = "http"
@@ -283,23 +297,27 @@ job "conductor" {
         }
       }
 
+      service {
+        name = "${JOB}-${TASK}-tcp"
+        port = "tcp"
+
+        check {
+          type     = "tcp"
+          interval = "10s"
+          timeout  = "3s"
+        }
+      }
+
       resources {
-        cpu    = 128 # MHz
+        cpu    = 128  # MHz
         memory = 1024 # MB
 
         network {
           mbits = 4
-          port "http" {
-            static = 9200
-          }
-          port "tcp" {
-            static = 9300
-          }
+          port "http" {}
+          port "tcp" {}
         }
       }
-    }
-    // end task
-  }
-  // end group
-
+    } // end task
+  }// end group
 } // end job
