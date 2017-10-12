@@ -29,6 +29,7 @@ import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,10 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Singleton;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -57,31 +62,18 @@ public class Elasticsearch5Module extends AbstractModule {
 
 		String dnsService = config.getProperty("workflow.elasticsearch.dnsService", null);
 		if (StringUtils.isNotEmpty(dnsService)) {
-			DNSLookup lookup = new DNSLookup();
-
+			log.info("Using dns service {} to setup elastic search cluster", dnsService);
 			int connectAttempts = config.getIntProperty("workflow.elasticsearch.dnsLookup.attempts", 60);
 			int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.dnsLookup.sleep.seconds", 1);
 
 			WaitUtils.wait("dnsLookup(elasticsearch)", connectAttempts, connectSleepSecs, () -> {
-				DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
-				if (responses.getResponses() == null || responses.getResponses().length == 0)
-					throw new RuntimeException("Unable to lookup service. No records found");
-
-				for (DNSLookup.DNSResponse response : responses.getResponses()) {
-					String hostname = response.getHostName();
-					Integer hostport = response.getPort();
-					InetAddress inetAddress = null;
-					try {
-						inetAddress = InetAddress.getByName(hostname);
-					} catch (UnknownHostException ex) {
-						throw new RuntimeException(ex);
-					}
-					log.info("Adding {}:{} to the elasticsearch cluster configuration", hostname, hostport);
-					tc.addTransportAddress(new InetSocketTransportAddress(inetAddress, hostport));
-				}
+				List<TransportAddress> nodes = lookupNodes(dnsService);
+				nodes.forEach(node -> {
+					log.info("Adding {} to the elasticsearch cluster configuration", node);
+					tc.addTransportAddress(node);
+				});
 				return true;
 			});
-
 		} else {
 			String clusterAddress = config.getProperty("workflow.elasticsearch.url", "");
 			if (clusterAddress.equals("")) {
@@ -114,10 +106,70 @@ public class Elasticsearch5Module extends AbstractModule {
 					throw new RuntimeException(e);
 				}
 			});
+
+			// Start the dns service monitor
+			int monitorDelay = config.getIntProperty("workflow.elasticsearch.monitor.delay", 5);
+			int monitorPeriod = config.getIntProperty("workflow.elasticsearch.monitor.period.seconds", 1);
+			try {
+				Executors.newScheduledThreadPool(1)
+						.scheduleAtFixedRate(() -> this.monitor(tc, dnsService), monitorDelay, monitorPeriod, TimeUnit.SECONDS);
+			} catch (Exception e) {
+				log.error("Unable to start dns service monitor: {}", e.getMessage(), e);
+			}
 		}
 
 		return tc;
+	}
 
+	private List<TransportAddress> lookupNodes(String dnsService) {
+		DNSLookup lookup = new DNSLookup();
+		DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
+		if (responses.getResponses() == null || responses.getResponses().length == 0)
+			throw new RuntimeException("Unable to lookup service. No records found");
+
+		List<TransportAddress> addressList = new ArrayList<>(responses.getResponses().length);
+		for (DNSLookup.DNSResponse response : responses.getResponses()) {
+			String hostname = response.getHostName();
+			Integer hostport = response.getPort();
+			InetAddress inetAddress = null;
+			try {
+				inetAddress = InetAddress.getByName(hostname);
+			} catch (UnknownHostException ex) {
+				throw new RuntimeException(ex);
+			}
+			addressList.add(new InetSocketTransportAddress(inetAddress, hostport));
+		}
+
+		return addressList;
+	}
+
+	private void monitor(TransportClient transport, String dnsService) {
+		try {
+			List<TransportAddress> current = transport.transportAddresses();
+			List<TransportAddress> resolved = lookupNodes(dnsService);
+			log.info("Current nodes=" + current + ", resolved nodes=" + resolved);
+
+//			ClusterHealthResponse health = transport.admin().cluster().prepareHealth().execute().get();
+//			log.info("Cluster health " + health);
+
+			// Remove from the current configuration if not found in resolved
+			current.forEach(node -> {
+				if (!resolved.contains(node)) {
+					log.info("Excluding node {} from the elasticsearch cluster", node);
+					transport.removeTransportAddress(node);
+				}
+			});
+
+			// Add new to the configuration
+			resolved.forEach(node -> {
+				if (!transport.transportAddresses().contains(node)) {
+					log.info("Adding node {} from the elasticsearch cluster", node);
+					transport.addTransportAddress(node);
+				}
+			});
+		} catch (Exception ex) {
+			log.error("Monitor failed: " + ex.getMessage(), ex);
+		}
 	}
 
 	@Override
