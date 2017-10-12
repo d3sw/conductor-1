@@ -120,7 +120,7 @@ job "conductor" {
         // Database settings
         db = "redis"
         workflow_dynomite_cluster_name = "${NOMAD_JOB_NAME}"
-        workflow_dynomite_cluster_dnsService = "${NOMAD_JOB_NAME}-db.service.<TLD>"
+        workflow_dynomite_cluster_service = "${NOMAD_JOB_NAME}-db.service.<TLD>"
 
         // Workflow settings
         workflow_namespace_prefix = "${NOMAD_JOB_NAME}.conductor"
@@ -130,7 +130,7 @@ job "conductor" {
 
         // Elasticsearch settings
         workflow_elasticsearch_mode = "elasticsearch"
-        workflow_elasticsearch_dnsService = "${NOMAD_JOB_NAME}-search-tcp.service.<TLD>"
+        workflow_elasticsearch_service = "${NOMAD_JOB_NAME}-search-tcp.service.<TLD>"
         workflow_elasticsearch_index_name = "conductor.<TLD>"
         workflow_elasticsearch_cluster_name = "${NOMAD_JOB_NAME}.search"
         workflow_elasticsearch_tasklog_index_name = "task_log.<TLD>"

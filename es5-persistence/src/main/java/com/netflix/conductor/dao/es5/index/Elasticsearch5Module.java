@@ -60,11 +60,11 @@ public class Elasticsearch5Module extends AbstractModule {
 				.build();
 		TransportClient tc = new PreBuiltTransportClient(settings);
 
-		String dnsService = config.getProperty("workflow.elasticsearch.dnsService", null);
+		String dnsService = config.getProperty("workflow.elasticsearch.service", null);
 		if (StringUtils.isNotEmpty(dnsService)) {
 			log.info("Using dns service {} to setup elastic search cluster", dnsService);
-			int connectAttempts = config.getIntProperty("workflow.elasticsearch.dnsLookup.attempts", 60);
-			int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.dnsLookup.sleep.seconds", 1);
+			int connectAttempts = config.getIntProperty("workflow.elasticsearch.dnslookup.attempts", 60);
+			int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.dnslookup.sleep.seconds", 1);
 
 			WaitUtils.wait("dnsLookup(elasticsearch)", connectAttempts, connectSleepSecs, () -> {
 				List<TransportAddress> nodes = lookupNodes(dnsService);

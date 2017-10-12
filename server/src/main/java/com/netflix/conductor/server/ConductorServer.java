@@ -97,11 +97,11 @@ public class ConductorServer {
 		}
 
 		if (!db.equals(DB.memory)) {
-			String dnsService = cc.getProperty("workflow.dynomite.cluster.dnsService", null);
+			String dnsService = cc.getProperty("workflow.dynomite.cluster.service", null);
 			if (StringUtils.isNotEmpty(dnsService)) {
 				logger.info("Using dns lookup to setup dynomite cluster");
-				int connectAttempts = cc.getIntProperty("workflow.dynomite.dnsLookup.attempts", 60);
-				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.dnsLookup.sleep.seconds", 1);
+				int connectAttempts = cc.getIntProperty("workflow.dynomite.dnslookup.attempts", 60);
+				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.dnslookup.sleep.seconds", 1);
 
 				// Run dns lookup in the waiter wrapper
 				DNSLookup lookup = new DNSLookup();
