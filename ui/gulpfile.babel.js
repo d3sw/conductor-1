@@ -166,12 +166,10 @@ gulp.task('watch', cb => {
 
 gulp.task('set-env', function () {
   //Only use localhost if WF_SERVER is not set
-  var wf_service = process.env.WF_SERVICE || 'conductor-server.service.owf-dev';
   var wf_server = process.env.WF_SERVER || 'http://localhost:8080/api/';
   env({
     vars: {
-      WF_SERVER: wf_server,
-      WF_SERVICE: wf_service
+      WF_SERVER: wf_server
     }
   });
 });
