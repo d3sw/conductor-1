@@ -92,23 +92,23 @@ public class Elasticsearch5Module extends AbstractModule {
 		}
 
 		// Elasticsearch waiter will be in place only when there is at least one server
-		if (!tc.transportAddresses().isEmpty()) {
-			int connectAttempts = config.getIntProperty("workflow.elasticsearch.connection.attempts", 60);
-			int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.connection.sleep.seconds", 1);
+		int connectAttempts = config.getIntProperty("workflow.elasticsearch.connection.attempts", 60);
+		int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.connection.sleep.seconds", 1);
 
-			WaitUtils.wait("elasticsearch", connectAttempts, connectSleepSecs, () -> {
-				ClusterHealthResponse healthResponse = null;
-				try {
-					// Get cluster health status
-					healthResponse = tc.admin().cluster().prepareHealth().execute().get();
-					log.info("Cluster health response:" + healthResponse.toString());
-					return true;
-				} catch (Exception e) {
-					throw new RuntimeException(e);
-				}
-			});
+		WaitUtils.wait("elasticsearch", connectAttempts, connectSleepSecs, () -> {
+			ClusterHealthResponse healthResponse = null;
+			try {
+				// Get cluster health status
+				healthResponse = tc.admin().cluster().prepareHealth().execute().get();
+				log.info("Cluster health response:" + healthResponse.toString());
+				return true;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
 
-			// Start the dns service monitor
+		// Start the dns service monitor
+		if (StringUtils.isNotEmpty(dnsService)) {
 			int monitorDelay = config.getIntProperty("workflow.elasticsearch.monitor.delay", 30);
 			int monitorPeriod = config.getIntProperty("workflow.elasticsearch.monitor.period.seconds", 3);
 			try {
