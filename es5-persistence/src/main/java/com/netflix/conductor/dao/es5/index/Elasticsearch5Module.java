@@ -74,6 +74,7 @@ public class Elasticsearch5Module extends AbstractModule {
 				});
 				return true;
 			});
+			log.info("Dns lookup done");
 		} else {
 			String clusterAddress = config.getProperty("workflow.elasticsearch.url", "");
 			if (clusterAddress.equals("")) {
@@ -90,7 +91,7 @@ public class Elasticsearch5Module extends AbstractModule {
 			}
 		}
 
-		// Elasticsearch wait will be in place only when there is at least one server
+		// Elasticsearch waiter will be in place only when there is at least one server
 		if (!tc.transportAddresses().isEmpty()) {
 			int connectAttempts = config.getIntProperty("workflow.elasticsearch.connection.attempts", 60);
 			int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.connection.sleep.seconds", 1);
@@ -112,9 +113,9 @@ public class Elasticsearch5Module extends AbstractModule {
 			int monitorPeriod = config.getIntProperty("workflow.elasticsearch.monitor.period.seconds", 3);
 			try {
 				Executors.newScheduledThreadPool(1)
-						.scheduleAtFixedRate(() -> this.monitor(tc, dnsService), monitorDelay, monitorPeriod, TimeUnit.SECONDS);
+						.scheduleAtFixedRate(() -> monitor(tc, dnsService), monitorDelay, monitorPeriod, TimeUnit.SECONDS);
 			} catch (Exception e) {
-				log.error("Unable to start dns service monitor: {}", e.getMessage(), e);
+				log.error("Unable to start elasticsearch service monitor: {}", e.getMessage(), e);
 			}
 		}
 
