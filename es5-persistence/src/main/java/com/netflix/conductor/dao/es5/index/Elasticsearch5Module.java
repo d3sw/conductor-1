@@ -161,7 +161,7 @@ public class Elasticsearch5Module extends AbstractModule {
 			// Add new to the configuration
 			resolved.forEach(node -> {
 				if (!transport.transportAddresses().contains(node)) {
-					log.info("Adding node {} from the elasticsearch cluster", node);
+					log.info("Adding node {} to the elasticsearch cluster", node);
 					transport.addTransportAddress(node);
 				}
 			});
