@@ -51,6 +51,8 @@ import javax.servlet.DispatcherType;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -80,8 +82,6 @@ public class ConductorServer {
 
 	private SearchMode mode;
 
-	private String dbDnsService;
-
 	public ConductorServer(ConductorConfig cc) {
 		this.cc = cc;
 		String dynoClusterName = cc.getProperty("workflow.dynomite.cluster.name", "");
@@ -104,16 +104,16 @@ public class ConductorServer {
 		}
 
 		if (!db.equals(DB.memory)) {
-			dbDnsService = cc.getProperty("workflow.dynomite.cluster.service", null);
-			if (StringUtils.isNotEmpty(dbDnsService)) {
-				logger.info("Using dns service {} to setup db cluster", dbDnsService);
+			String dnsService = cc.getProperty("workflow.dynomite.cluster.service", null);
+			if (StringUtils.isNotEmpty(dnsService)) {
+				logger.info("Using dns service {} to setup db cluster", dnsService);
 
 				int connectAttempts = cc.getIntProperty("workflow.dynomite.dnslookup.attempts", 60);
 				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.dnslookup.sleep.seconds", 1);
 
 				// Run dns lookup in the waiter wrapper
 				WaitUtils.wait("dnsLookup(dynomite)", connectAttempts, connectSleepSecs, () -> {
-					List<Host> nodes = lookupNodes(cc, dbDnsService);
+					List<Host> nodes = lookupNodes(cc, dnsService);
 					nodes.forEach(node -> {
 						logger.info("Adding {} to the db configuration", node);
 						dynoHosts.add(node);
@@ -159,7 +159,7 @@ public class ConductorServer {
 			case dynomite:
 				String enabled = cc.getProperty("workflow.dynomite.cluster.enabled", "false");
 				if (Boolean.parseBoolean(enabled)) {
-					logger.info("Using jedis cluster api per enabled configuration");
+					logger.info("Using jedis cluster api");
 					Set<HostAndPort> hosts = dynoHosts.stream()
 						 .map(host -> new HostAndPort(host.getHostName(), host.getPort()))
 						 .collect(toSet());
@@ -197,27 +197,15 @@ public class ConductorServer {
 							.build();
 				}
 
-				JedisCommands lambda = jedis; // Required for lambda wrapper only
+				JedisCommands wrapper = jedis; // Required for lambda wrapper only
 				int connectAttempts = cc.getIntProperty("workflow.dynomite.connection.attempts", 60);
 				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.connection.sleep.seconds", 1);
 				WaitUtils.wait("dynomite", connectAttempts, connectSleepSecs, () -> {
 					// In response, the echo should return the 'ping'
-					String response = lambda.echo("ping");
+					String response = wrapper.echo("ping");
 					return "ping".equalsIgnoreCase(response);
 				});
 
-//				// Start the dns service monitor
-//				if (StringUtils.isNotEmpty(dbDnsService)) {
-//					int monitorDelay = cc.getIntProperty("workflow.dynomite.monitor.delay", 30);
-//					int monitorPeriod = cc.getIntProperty("workflow.dynomite.monitor.period.seconds", 3);
-//					try {
-//						Executors.newScheduledThreadPool(1)
-//								.scheduleAtFixedRate(() -> monitor(jedisClient, dbDnsService), monitorDelay, monitorPeriod, TimeUnit.SECONDS);
-//					} catch (Exception e) {
-//						logger.error("Unable to start dynomite service monitor: {}", e.getMessage(), e);
-//					}
-//				}
-//				jedis = dynoClient;
 				logger.info("Starting conductor server using dynomite cluster " + dynoClusterName);
 				break;
 
@@ -247,16 +235,6 @@ public class ConductorServer {
 		}
 
 		this.sm = new ServerModule(jedis, hostSupplier, cc);
-	}
-
-	private void monitor(DynoJedisClient client, String dnsService) {
-		try {
-			List<Host> resolved = lookupNodes(cc, dbDnsService);
-			logger.debug("Resolved nodes=" + resolved);
-
-		} catch (Exception ex) {
-			logger.error("Monitor failed: " + ex.getMessage(), ex);
-		}
 	}
 
 	private List<Host> lookupNodes(ConductorConfig cc, String dnsService) {
