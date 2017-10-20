@@ -43,8 +43,6 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisCommands;
 
 import javax.servlet.DispatcherType;
@@ -52,8 +50,6 @@ import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static java.util.stream.Collectors.toSet;
 
 /**
  * @author Viren
@@ -112,16 +108,13 @@ public class ConductorServer {
 
 				// Run dns lookup in the waiter wrapper
 				WaitUtils.wait("dnsLookup(dynomite)", connectAttempts, connectSleepSecs, () -> {
-					String[] names = dnsService.split(";");
-					for(String service : names) {
-						List<Host> nodes = lookupNodes(cc, service);
-						nodes.forEach(node -> {
-							if (!dynoHosts.contains(node)) {
-								logger.info("Adding {} to the db configuration", node);
-								dynoHosts.add(node);
-							}
-						});
-					}
+					List<Host> nodes = lookupNodes(cc, dnsService);
+					nodes.forEach(node -> {
+						if (!dynoHosts.contains(node)) {
+							logger.info("Adding {} to the db configuration", node);
+							dynoHosts.add(node);
+						}
+					});
 					return true;
 				});
 
@@ -161,47 +154,37 @@ public class ConductorServer {
 		switch (db) {
 			case redis:
 			case dynomite:
-				String enabled = cc.getProperty("workflow.dynomite.cluster.enabled", "false");
-				if (Boolean.parseBoolean(enabled)) {
-					logger.info("Using jedis cluster api");
-					Set<HostAndPort> hosts = dynoHosts.stream()
-						 .map(host -> new HostAndPort(host.getHostName(), host.getPort()))
-						 .collect(toSet());
-					jedis = new JedisCluster(hosts);
-				} else {
-					// Otherwise go with dyno api
-					final Set<HostToken> tokens = new HashSet<>();
-					dynoHosts.forEach(host -> {
-						HostToken token = new HostToken(tokens.size() + 1L, host);
-						tokens.add(token);
-					});
+				final Set<HostToken> tokens = new HashSet<>();
+				dynoHosts.forEach(host -> {
+					HostToken token = new HostToken(tokens.size() + 1L, host);
+					tokens.add(token);
+				});
 
-					final TokenMapSupplier tokenSupplier = new TokenMapSupplier() {
-						@Override
-						public List<HostToken> getTokens(Set<Host> activeHosts) {
-							return tokens.stream()
-									.filter(item -> activeHosts.contains(item.getHost()))
-									.collect(Collectors.toList());
-						}
+				final TokenMapSupplier tokenSupplier = new TokenMapSupplier() {
+					@Override
+					public List<HostToken> getTokens(Set<Host> activeHosts) {
+						return tokens.stream()
+								.filter(item -> activeHosts.contains(item.getHost()))
+								.collect(Collectors.toList());
+					}
 
-						@Override
-						public HostToken getTokenForHost(Host host, Set<Host> activeHosts) {
-							return CollectionUtils.find(tokens, x -> x.getHost().equals(host));
-						}
-					};
+					@Override
+					public HostToken getTokenForHost(Host host, Set<Host> activeHosts) {
+						return CollectionUtils.find(tokens, x -> x.getHost().equals(host));
+					}
+				};
 
-					ConnectionPoolConfigurationImpl cp = new ConnectionPoolConfigurationImpl(dynoClusterName)
-							.withTokenSupplier(tokenSupplier)
-							.setLocalRack(cc.getAvailabilityZone())
-							.setLocalDataCenter(cc.getRegion());
+				ConnectionPoolConfigurationImpl cp = new ConnectionPoolConfigurationImpl(dynoClusterName)
+						.withTokenSupplier(tokenSupplier)
+						.setLocalRack(cc.getAvailabilityZone())
+						.setLocalDataCenter(cc.getRegion());
 
-					jedis = new DynoJedisClient.Builder()
-							.withHostSupplier(hostSupplier)
-							.withApplicationName(cc.getAppId())
-							.withDynomiteClusterName(dynoClusterName)
-							.withCPConfig(cp)
-							.build();
-				}
+				jedis = new DynoJedisClient.Builder()
+						.withHostSupplier(hostSupplier)
+						.withApplicationName(cc.getAppId())
+						.withDynomiteClusterName(dynoClusterName)
+						.withCPConfig(cp)
+						.build();
 
 				JedisCommands wrapper = jedis; // Required for lambda wrapper only
 				int connectAttempts = cc.getIntProperty("workflow.dynomite.connection.attempts", 60);
