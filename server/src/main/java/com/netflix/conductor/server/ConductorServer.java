@@ -51,8 +51,7 @@ import javax.servlet.DispatcherType;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -113,11 +112,16 @@ public class ConductorServer {
 
 				// Run dns lookup in the waiter wrapper
 				WaitUtils.wait("dnsLookup(dynomite)", connectAttempts, connectSleepSecs, () -> {
-					List<Host> nodes = lookupNodes(cc, dnsService);
-					nodes.forEach(node -> {
-						logger.info("Adding {} to the db configuration", node);
-						dynoHosts.add(node);
-					});
+					String[] names = dnsService.split(";");
+					for(String service : names) {
+						List<Host> nodes = lookupNodes(cc, service);
+						nodes.forEach(node -> {
+							if (!dynoHosts.contains(node)) {
+								logger.info("Adding {} to the db configuration", node);
+								dynoHosts.add(node);
+							}
+						});
+					}
 					return true;
 				});
 
@@ -175,7 +179,9 @@ public class ConductorServer {
 					final TokenMapSupplier tokenSupplier = new TokenMapSupplier() {
 						@Override
 						public List<HostToken> getTokens(Set<Host> activeHosts) {
-							return new ArrayList<>(tokens);
+							return tokens.stream()
+									.filter(item -> activeHosts.contains(item.getHost()))
+									.collect(Collectors.toList());
 						}
 
 						@Override
