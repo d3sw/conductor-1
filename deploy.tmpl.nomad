@@ -144,9 +144,6 @@ job "conductor" {
         conductor_auth_url = "https://auth.dmlib.de/v1/tenant/deluxe/auth/token"
         conductor_auth_clientId = "deluxe.conductor"
         conductor_auth_clientSecret = "4ecafd6a-a3ce-45dd-bf05-85f2941413d3"
-
-        // Exclude demo workflows
-        loadSample = "false"
       }
 
       service {

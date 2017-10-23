@@ -273,7 +273,7 @@ public class ConductorServer {
 		server.start();
 		System.out.println("Started server on http://localhost:" + port + "/");
 		try {
-			boolean create = Boolean.parseBoolean(System.getenv("loadSample"));
+			boolean create = Boolean.getBoolean("loadSample");
 			if (create) {
 				System.out.println("Creating kitchensink workflow");
 				createKitchenSink(port);
