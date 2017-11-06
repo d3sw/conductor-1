@@ -1,12 +1,12 @@
 /**
  * Copyright 2017 Netflix, Inc.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package com.netflix.conductor.server;
 
@@ -24,6 +24,7 @@ import com.google.inject.servlet.GuiceFilter;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.core.utils.WaitUtils;
 import com.netflix.conductor.dao.es5.es.EmbeddedElasticSearch;
+import com.netflix.conductor.dns.DNSLookup;
 import com.netflix.conductor.redis.utils.JedisMock;
 import com.netflix.dyno.connectionpool.Host;
 import com.netflix.dyno.connectionpool.Host.Status;
@@ -31,8 +32,11 @@ import com.netflix.dyno.connectionpool.HostSupplier;
 import com.netflix.dyno.connectionpool.TokenMapSupplier;
 import com.netflix.dyno.connectionpool.impl.ConnectionPoolConfigurationImpl;
 import com.netflix.dyno.connectionpool.impl.lb.HostToken;
+import com.netflix.dyno.connectionpool.impl.utils.CollectionUtils;
+import com.netflix.dyno.connectionpool.impl.utils.ConfigUtils;
 import com.netflix.dyno.jedis.DynoJedisClient;
 import com.sun.jersey.api.client.Client;
+import org.apache.commons.lang.StringUtils;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -45,6 +49,7 @@ import javax.servlet.DispatcherType;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Viren
@@ -53,7 +58,7 @@ import java.util.*;
 public class ConductorServer {
 
 	private static Logger logger = LoggerFactory.getLogger(ConductorServer.class);
-	
+
 	private enum DB {
 		redis, dynomite, memory
 	}
@@ -61,26 +66,26 @@ public class ConductorServer {
 	private enum SearchMode {
 		elasticsearch, memory
 	}
-	
+
 	private ServerModule sm;
-	
+
 	private Server server;
-	
+
 	private ConductorConfig cc;
-	
+
 	private DB db;
 
 	private SearchMode mode;
-	
+
 	public ConductorServer(ConductorConfig cc) {
 		this.cc = cc;
 		String dynoClusterName = cc.getProperty("workflow.dynomite.cluster.name", "");
-		
+
 		List<Host> dynoHosts = new LinkedList<>();
 		String dbstring = cc.getProperty("db", "memory");
 		try {
 			db = DB.valueOf(dbstring);
-		}catch(IllegalArgumentException ie) {
+		} catch (IllegalArgumentException ie) {
 			logger.error("Invalid db name: " + dbstring + ", supported values are: redis, dynomite, memory");
 			System.exit(1);
 		}
@@ -88,188 +93,230 @@ public class ConductorServer {
 		String modestring = cc.getProperty("workflow.elasticsearch.mode", "memory");
 		try {
 			mode = SearchMode.valueOf(modestring);
-		}catch(IllegalArgumentException ie) {
+		} catch (IllegalArgumentException ie) {
 			logger.error("Invalid setting for workflow.elasticsearch.mode: " + modestring + ", supported values are: elasticsearch, memory");
-			System.exit(1);			
+			System.exit(1);
 		}
-		
-		if(!db.equals(DB.memory)) {
-			String hosts = cc.getProperty("workflow.dynomite.cluster.hosts", null);
-			if(hosts == null) {
-				System.err.println("Missing dynomite/redis hosts.  Ensure 'workflow.dynomite.cluster.hosts' has been set in the supplied configuration.");
-				logger.error("Missing dynomite/redis hosts.  Ensure 'workflow.dynomite.cluster.hosts' has been set in the supplied configuration.");
-				System.exit(1);
+
+		if (!db.equals(DB.memory)) {
+			String dnsService = cc.getProperty("workflow.dynomite.cluster.service", null);
+			if (StringUtils.isNotEmpty(dnsService)) {
+				logger.info("Using dns service {} to setup db cluster", dnsService);
+
+				int connectAttempts = cc.getIntProperty("workflow.dynomite.dnslookup.attempts", 60);
+				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.dnslookup.sleep.seconds", 1);
+
+				// Run dns lookup in the waiter wrapper
+				WaitUtils.wait("dnsLookup(dynomite)", connectAttempts, connectSleepSecs, () -> {
+					List<Host> nodes = lookupNodes(cc, dnsService);
+					nodes.forEach(node -> {
+						if (!dynoHosts.contains(node)) {
+							logger.info("Adding {} to the db configuration", node);
+							dynoHosts.add(node);
+						}
+					});
+					return true;
+				});
+
+				logger.info("Dns lookup done");
+			} else {
+				logger.info("Using provided hosts to setup db cluster");
+
+				String hosts = cc.getProperty("workflow.dynomite.cluster.hosts", null);
+				if (hosts == null) {
+					System.err.println("Missing dynomite/redis hosts.  Ensure 'workflow.dynomite.cluster.hosts' has been set in the supplied configuration.");
+					logger.error("Missing dynomite/redis hosts.  Ensure 'workflow.dynomite.cluster.hosts' has been set in the supplied configuration.");
+					System.exit(1);
+				}
+				String[] hostConfigs = hosts.split(";");
+
+				for (String hostConfig : hostConfigs) {
+					String[] hostConfigValues = hostConfig.split(":");
+					String host = hostConfigValues[0];
+					int port = Integer.parseInt(hostConfigValues[1]);
+					String rack = hostConfigValues[2];
+					Host dynoHost = new Host(host, port, rack, Status.Up);
+					dynoHosts.add(dynoHost);
+				}
 			}
-			String[] hostConfigs = hosts.split(";");
-			
-			for(String hostConfig : hostConfigs) {
-				String[] hostConfigValues = hostConfig.split(":");
-				String host = hostConfigValues[0];
-				int port = Integer.parseInt(hostConfigValues[1]);
-				String rack = hostConfigValues[2];
-				Host dynoHost = new Host(host, port, rack, Status.Up);
-				dynoHosts.add(dynoHost);
-			}
-				
-		}else {
+
+		} else {
 			//Create a single shard host supplier
 			Host dynoHost = new Host("localhost", 0, cc.getAvailabilityZone(), Status.Up);
 			dynoHosts.add(dynoHost);
 		}
 		init(dynoClusterName, dynoHosts);
 	}
-	
+
 	private void init(String dynoClusterName, List<Host> dynoHosts) {
-		HostSupplier hs = new HostSupplier() {
-			
-			@Override
-			public Collection<Host> getHosts() {
-				return dynoHosts;
-			}
-		};
-		
+		final HostSupplier hostSupplier = () -> dynoHosts;
 		JedisCommands jedis = null;
-		switch(db) {
-		case redis:	
-		case dynomite:
-			
-			ConnectionPoolConfigurationImpl cp = new ConnectionPoolConfigurationImpl(dynoClusterName).withTokenSupplier(new TokenMapSupplier() {
-				
-				HostToken token = new HostToken(1L, dynoHosts.get(0));
-				
-				@Override
-				public List<HostToken> getTokens(Set<Host> activeHosts) {
-					return Arrays.asList(token);
-				}
-				
-				@Override
-				public HostToken getTokenForHost(Host host, Set<Host> activeHosts) {
-					return token;
-				}
-			}).setLocalRack(cc.getAvailabilityZone()).setLocalDataCenter(cc.getRegion());
+		switch (db) {
+			case redis:
+			case dynomite:
+				final Set<HostToken> tokens = new HashSet<>();
+				dynoHosts.forEach(host -> {
+					HostToken token = new HostToken(tokens.size() + 1L, host);
+					tokens.add(token);
+				});
 
-			JedisCommands jedisClient = new DynoJedisClient.Builder()
-				.withHostSupplier(hs)
-				.withApplicationName(cc.getAppId())
-				.withDynomiteClusterName(dynoClusterName)
-				.withCPConfig(cp)
-				.build();
+				final TokenMapSupplier tokenSupplier = new TokenMapSupplier() {
+					@Override
+					public List<HostToken> getTokens(Set<Host> activeHosts) {
+						return tokens.stream()
+								.filter(item -> activeHosts.contains(item.getHost()))
+								.collect(Collectors.toList());
+					}
 
-			int connectAttempts = cc.getIntProperty("workflow.dynomite.connection.attempts", 60);
-			int connectSleepSecs = cc.getIntProperty("workflow.dynomite.connection.sleep.seconds", 1);
+					@Override
+					public HostToken getTokenForHost(Host host, Set<Host> activeHosts) {
+						return CollectionUtils.find(tokens, x -> x.getHost().equals(host));
+					}
+				};
 
-			WaitUtils.wait("dynomite", connectAttempts, connectSleepSecs, () -> {
-				// In response, the echo should return the 'ping'
-				String response = jedisClient.echo("ping");
-				return "ping".equalsIgnoreCase(response);
-			});
+				ConnectionPoolConfigurationImpl cp = new ConnectionPoolConfigurationImpl(dynoClusterName)
+						.withTokenSupplier(tokenSupplier)
+						.setLocalRack(cc.getAvailabilityZone())
+						.setLocalDataCenter(cc.getRegion());
 
-			jedis = jedisClient;
-			logger.info("Starting conductor server using dynomite cluster " + dynoClusterName);
-			break;
-			
-		case memory:
-			jedis = new JedisMock();
+				jedis = new DynoJedisClient.Builder()
+						.withHostSupplier(hostSupplier)
+						.withApplicationName(cc.getAppId())
+						.withDynomiteClusterName(dynoClusterName)
+						.withCPConfig(cp)
+						.build();
+
+				JedisCommands wrapper = jedis; // Required for lambda wrapper only
+				int connectAttempts = cc.getIntProperty("workflow.dynomite.connection.attempts", 60);
+				int connectSleepSecs = cc.getIntProperty("workflow.dynomite.connection.sleep.seconds", 1);
+				WaitUtils.wait("dynomite", connectAttempts, connectSleepSecs, () -> {
+					// In response, the echo should return the 'ping'
+					String response = wrapper.echo("ping");
+					return "ping".equalsIgnoreCase(response);
+				});
+
+				logger.info("Starting conductor server using dynomite cluster " + dynoClusterName);
+				break;
+
+			case memory:
+				jedis = new JedisMock();
 		}
-		
+
 		switch (mode) {
-		case memory:
+			case memory:
 
-			try {
-				EmbeddedElasticSearch.start();
-				if(cc.getProperty("workflow.elasticsearch.url", null) == null) {
-					System.setProperty("workflow.elasticsearch.url", "localhost:9300");
+				try {
+					EmbeddedElasticSearch.start();
+					if (cc.getProperty("workflow.elasticsearch.url", null) == null) {
+						System.setProperty("workflow.elasticsearch.url", "localhost:9300");
+					}
+					if (cc.getProperty("workflow.elasticsearch.index.name", null) == null) {
+						System.setProperty("workflow.elasticsearch.index.name", "conductor");
+					}
+				} catch (Exception e) {
+					logger.error("Error starting embedded elasticsearch.  Search functionality will be impacted: " + e.getMessage(), e);
 				}
-				if(cc.getProperty("workflow.elasticsearch.index.name", null) == null) {
-					System.setProperty("workflow.elasticsearch.index.name", "conductor");
-				}
-			} catch (Exception e) {
-				logger.error("Error starting embedded elasticsearch.  Search functionality will be impacted: " + e.getMessage(), e);
-			}
-			logger.info("Starting conductor server using in memory data store");
-			break;			
+				logger.info("Starting conductor server using in memory data store");
+				break;
 
-		case elasticsearch:
-			break;
+			case elasticsearch:
+				break;
 		}
 
-		this.sm = new ServerModule(jedis, hs, cc);
+		this.sm = new ServerModule(jedis, hostSupplier, cc);
 	}
-	
+
+	private List<Host> lookupNodes(ConductorConfig cc, String dnsService) {
+		DNSLookup lookup = new DNSLookup();
+		DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
+		if (responses.getResponses() == null || responses.getResponses().length == 0)
+			throw new RuntimeException("Unable to lookup service. No records found for " + dnsService);
+
+		String rack = cc.getAvailabilityZone();
+		String datacenter = ConfigUtils.getDataCenterFromRack(rack);
+		List<Host> hosts = new ArrayList<>(responses.getResponses().length);
+		for(DNSLookup.DNSResponse response : responses.getResponses()){
+			Host host = new Host(response.getHostName(), response.getAddress(), response.getPort(), rack, datacenter,
+					Status.Up);
+			hosts.add(host);
+		}
+		return hosts;
+	}
+
 	public ServerModule getGuiceModule() {
 		return sm;
 	}
-	
+
 	public synchronized void start(int port, boolean join) throws Exception {
-		
-		if(server != null) {
+
+		if (server != null) {
 			throw new IllegalStateException("Server is already running");
 		}
-		
+
 		Guice.createInjector(sm);
 
 		//Swagger
 		String resourceBasePath = Main.class.getResource("/swagger-ui").toExternalForm();
 		this.server = new Server(port);
-		
+
 		ServletContextHandler context = new ServletContextHandler();
 		context.addFilter(GuiceFilter.class, "/*", EnumSet.allOf(DispatcherType.class));
 		context.setResourceBase(resourceBasePath);
-		context.setWelcomeFiles(new String[] { "index.html" });
-		
+		context.setWelcomeFiles(new String[]{"index.html"});
+
 		server.setHandler(context);
 
 
 		DefaultServlet staticServlet = new DefaultServlet();
 		context.addServlet(new ServletHolder(staticServlet), "/*");
-		
+
 		server.start();
 		System.out.println("Started server on http://localhost:" + port + "/");
 		try {
 			boolean create = Boolean.getBoolean("loadSample");
-			if(create) {
+			if (create) {
 				System.out.println("Creating kitchensink workflow");
 				createKitchenSink(port);
 			}
-		}catch(Exception e) {
+		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 		}
-		
-		if(join) {
+
+		if (join) {
 			server.join();
 		}
 
 	}
-	
+
 	public synchronized void stop() throws Exception {
-		if(server == null) {
+		if (server == null) {
 			throw new IllegalStateException("Server is not running.  call #start() method to start the server");
 		}
 		server.stop();
 		server = null;
 	}
-	
+
 	private static void createKitchenSink(int port) throws Exception {
-		
+
 		List<TaskDef> taskDefs = new LinkedList<>();
-		for(int i = 0; i < 40; i++) {
+		for (int i = 0; i < 40; i++) {
 			taskDefs.add(new TaskDef("task_" + i, "task_" + i, 1, 0));
 		}
 		taskDefs.add(new TaskDef("search_elasticsearch", "search_elasticsearch", 1, 0));
-		
+
 		Client client = Client.create();
 		ObjectMapper om = new ObjectMapper();
 		client.resource("http://localhost:" + port + "/api/metadata/taskdefs").type(MediaType.APPLICATION_JSON).post(om.writeValueAsString(taskDefs));
-		
+
 		InputStream stream = Main.class.getResourceAsStream("/kitchensink.json");
 		client.resource("http://localhost:" + port + "/api/metadata/workflow").type(MediaType.APPLICATION_JSON).post(stream);
-		
+
 		stream = Main.class.getResourceAsStream("/sub_flow_1.json");
 		client.resource("http://localhost:" + port + "/api/metadata/workflow").type(MediaType.APPLICATION_JSON).post(stream);
-		
+
 		String input = "{\"task2Name\":\"task_5\"}";
 		client.resource("http://localhost:" + port + "/api/workflow/kitchensink").type(MediaType.APPLICATION_JSON).post(input);
-		
+
 		logger.info("Kitchen sink workflows are created!");
 	}
 }

@@ -37,19 +37,19 @@ public class WaitUtils {
                     }
                 }
             } catch (Exception ex) {
-                logger.error("{} connection failed: {}. Sleep for a while. Attempts made {}",
+                logger.error("{} waiter failed: {}. Sleep for a while. Attempts made {}",
                         service, ex.getMessage(), attemptsMade, ex);
                 try {
                     Thread.sleep(sleep * 1000L);
                 } catch (InterruptedException e) {
-                    logger.error("{} connection sleep got an error: {}", service, e.getMessage());
+                    logger.error("{} waiter sleep got an error: {}", service, e.getMessage());
                 }
             }
         } while (!connected && attemptsMade < attempts);
 
         // Print give up
         if (!connected && attemptsMade >= attempts) {
-            logger.warn("No {} connection obtained during {} attempts. Giving up ...", service, attemptsMade);
+            logger.warn("No {} desired state obtained during {} attempts. Giving up ...", service, attemptsMade);
             System.exit(-1);
         }
     }

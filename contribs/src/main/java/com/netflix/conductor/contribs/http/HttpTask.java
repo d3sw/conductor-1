@@ -19,10 +19,6 @@
 package com.netflix.conductor.contribs.http;
 
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.interfaces.Claim;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -34,6 +30,7 @@ import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.execution.tasks.WorkflowSystemTask;
+import com.netflix.conductor.dns.DNSLookup;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -43,7 +40,6 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.oauth.client.OAuthClientFilter;
 import com.sun.jersey.oauth.signature.OAuthParameters;
 import com.sun.jersey.oauth.signature.OAuthSecrets;
-import org.apache.commons.lang.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,7 +102,7 @@ public class HttpTask extends WorkflowSystemTask {
         task.setWorkerId(config.getServerId());
         String url = null;
         Input input = om.convertValue(request, Input.class);
-     
+
         if (request == null) {
             task.setReasonForIncompletion(MISSING_REQUEST);
             task.setStatus(Status.FAILED);
@@ -116,8 +112,8 @@ public class HttpTask extends WorkflowSystemTask {
                 DNSLookup lookup = new DNSLookup();
                 DNSLookup.DNSResponses responses = lookup.lookupService(input.getServiceDiscoveryQuery());
                 if (responses != null) {
-                    String address = responses.getResponses()[0].address;
-                    int port = responses.getResponses()[0].port;
+                    String address = responses.getResponses()[0].getAddress();
+                    int port = responses.getResponses()[0].getPort();
                     url = "http://" + address + ":" + port;
                 }
             }
@@ -130,10 +126,10 @@ public class HttpTask extends WorkflowSystemTask {
         } else {
             if (url != null) {
                 input.setUri(url + input.getUri());
-              
+
             }
         }
-        
+
 
         if (input.getMethod() == null) {
             task.setReasonForIncompletion("No HTTP method specified");
@@ -153,9 +149,9 @@ public class HttpTask extends WorkflowSystemTask {
                     Object main_body = getSth.get("body");
                     String body = main_body.toString();
 
-                    
+
                     response = httpCallUrlEncoded(input, body);
-					
+
                 } else {
                     response = httpCall(input);
                 }
@@ -287,7 +283,7 @@ public class HttpTask extends WorkflowSystemTask {
     private Object extractBody(ClientResponse cr) {
 
         String json = cr.getEntity(String.class);
-       
+
         try {
 
             JsonNode node = om.readTree(json);

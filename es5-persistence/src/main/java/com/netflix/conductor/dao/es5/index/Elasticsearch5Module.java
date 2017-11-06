@@ -1,12 +1,12 @@
 /**
  * Copyright 2016 Netflix, Inc.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package com.netflix.conductor.dao.es5.index;
 
@@ -22,18 +22,25 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.utils.WaitUtils;
+import com.netflix.conductor.dns.DNSLookup;
 import org.apache.commons.lang.StringUtils;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Singleton;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -43,52 +50,128 @@ import java.net.InetAddress;
 public class Elasticsearch5Module extends AbstractModule {
 
 	private static Logger log = LoggerFactory.getLogger(Elasticsearch5Module.class);
-	
+
 	@Provides
 	@Singleton
 	public Client getClient(Configuration config) throws Exception {
+		Settings settings = Settings.builder()
+				.put("client.transport.ignore_cluster_name", true)
+				.put("client.transport.sniff", true)
+				.build();
+		TransportClient tc = new PreBuiltTransportClient(settings);
 
-		String clusterAddress = config.getProperty("workflow.elasticsearch.url", "");
-		if(clusterAddress.equals("")) {
-			log.warn("workflow.elasticsearch.url is not set.  Indexing will remain DISABLED.");
+		String dnsService = config.getProperty("workflow.elasticsearch.service", null);
+		if (StringUtils.isNotEmpty(dnsService)) {
+			log.info("Using dns service {} to setup elastic search cluster", dnsService);
+			int connectAttempts = config.getIntProperty("workflow.elasticsearch.dnslookup.attempts", 60);
+			int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.dnslookup.sleep.seconds", 1);
+
+			WaitUtils.wait("dnsLookup(elasticsearch)", connectAttempts, connectSleepSecs, () -> {
+				List<TransportAddress> nodes = lookupNodes(dnsService);
+				nodes.forEach(node -> {
+					log.info("Adding {} to the elasticsearch cluster configuration", node);
+					tc.addTransportAddress(node);
+				});
+				return true;
+			});
+			log.info("Dns lookup done");
+		} else {
+			String clusterAddress = config.getProperty("workflow.elasticsearch.url", "");
+			if (clusterAddress.equals("")) {
+				log.warn("workflow.elasticsearch.url is not set.  Indexing will remain DISABLED.");
+			}
+
+			String[] hosts = clusterAddress.split(",");
+			for (String host : hosts) {
+				String[] hostparts = host.split(":");
+				String hostname = hostparts[0];
+				int hostport = 9200;
+				if (hostparts.length == 2) hostport = Integer.parseInt(hostparts[1]);
+				tc.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostname), hostport));
+			}
 		}
 
-        Settings settings = Settings.builder().put("client.transport.ignore_cluster_name",true).put("client.transport.sniff", true).build();
+		// Elasticsearch waiter will be in place only when there is at least one server
+		int connectAttempts = config.getIntProperty("workflow.elasticsearch.connection.attempts", 60);
+		int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.connection.sleep.seconds", 1);
 
-        TransportClient tc = new PreBuiltTransportClient(settings);
-        String[] hosts = clusterAddress.split(",");
-        for (String host : hosts) {
-            String[] hostparts = host.split(":");
-            String hostname = hostparts[0];
-            int hostport = 9200;
-            if (hostparts.length == 2) hostport = Integer.parseInt(hostparts[1]);
-            tc.addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostname), hostport));
-        }
+		WaitUtils.wait("elasticsearch", connectAttempts, connectSleepSecs, () -> {
+			ClusterHealthResponse healthResponse = null;
+			try {
+				// Get cluster health status
+				healthResponse = tc.admin().cluster().prepareHealth().execute().get();
+				log.info("Cluster health response:" + healthResponse.toString());
+				return true;
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		});
 
-        // Elasticsearch wait will be in place only when indexed enabled
-        if (StringUtils.isNotEmpty(clusterAddress)) {
-            int connectAttempts = config.getIntProperty("workflow.elasticsearch.connection.attempts", 60);
-            int connectSleepSecs = config.getIntProperty("workflow.elasticsearch.connection.sleep.seconds", 1);
+		// Start the dns service monitor
+		if (StringUtils.isNotEmpty(dnsService)) {
+			int monitorDelay = config.getIntProperty("workflow.elasticsearch.monitor.delay", 30);
+			int monitorPeriod = config.getIntProperty("workflow.elasticsearch.monitor.period.seconds", 3);
+			try {
+				Executors.newScheduledThreadPool(1)
+						.scheduleAtFixedRate(() -> monitor(tc, dnsService), monitorDelay, monitorPeriod, TimeUnit.SECONDS);
+			} catch (Exception e) {
+				log.error("Unable to start elasticsearch service monitor: {}", e.getMessage(), e);
+			}
+		}
 
-            WaitUtils.wait("elasticsearch", connectAttempts, connectSleepSecs, () -> {
-                ClusterHealthResponse healthResponse = null;
-                try {
-                    // Get cluster health status
-                    healthResponse = tc.admin().cluster().prepareHealth().execute().get();
-                    log.info("Cluster health response:" + healthResponse.toString());
-                    return true;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
+		return tc;
+	}
 
-        return tc;
-    
-    }
+	private List<TransportAddress> lookupNodes(String dnsService) {
+		DNSLookup lookup = new DNSLookup();
+		DNSLookup.DNSResponses responses = lookup.lookupService(dnsService);
+		if (responses.getResponses() == null || responses.getResponses().length == 0)
+			throw new RuntimeException("Unable to lookup service. No records found for " + dnsService);
+
+		List<TransportAddress> addressList = new ArrayList<>(responses.getResponses().length);
+		for (DNSLookup.DNSResponse response : responses.getResponses()) {
+			String hostname = response.getHostName();
+			Integer hostport = response.getPort();
+			InetAddress inetAddress = null;
+			try {
+				inetAddress = InetAddress.getByName(hostname);
+			} catch (UnknownHostException ex) {
+				throw new RuntimeException(ex);
+			}
+			addressList.add(new InetSocketTransportAddress(inetAddress, hostport));
+		}
+
+		return addressList;
+	}
+
+	private void monitor(TransportClient transport, String dnsService) {
+		try {
+			List<TransportAddress> current = transport.transportAddresses();
+			List<TransportAddress> resolved = lookupNodes(dnsService);
+			log.debug("Current nodes=" + current + ", resolved nodes=" + resolved);
+
+			// Remove from the current configuration if not found in resolved
+			current.forEach(node -> {
+				if (!resolved.contains(node)) {
+					log.info("Excluding node {} from the elasticsearch cluster", node);
+					transport.removeTransportAddress(node);
+				}
+			});
+
+			// Add new to the configuration
+			resolved.forEach(node -> {
+				if (!transport.transportAddresses().contains(node)) {
+					log.info("Adding node {} to the elasticsearch cluster", node);
+					transport.addTransportAddress(node);
+				}
+			});
+		} catch (Exception ex) {
+			log.error("Monitor failed: " + ex.getMessage(), ex);
+		}
+	}
 
 	@Override
 	protected void configure() {
-		
+
 	}
 }
