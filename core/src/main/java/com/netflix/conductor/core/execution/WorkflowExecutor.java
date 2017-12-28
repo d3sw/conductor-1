@@ -30,6 +30,7 @@ import com.netflix.conductor.common.metadata.workflow.RerunWorkflowRequest;
 import com.netflix.conductor.common.metadata.workflow.SkipTaskRequest;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask;
+import com.netflix.conductor.common.run.RetryStatus;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.Workflow.WorkflowStatus;
 import com.netflix.conductor.core.WorkflowContext;
@@ -304,6 +305,51 @@ public class WorkflowExecutor {
 		edao.updateWorkflow(workflow);
 
 		decide(workflowId);
+	}
+
+	public RetryStatus  retryReturnStatus(String workflowId) throws Exception {
+		Workflow workflow = edao.getWorkflow(workflowId, true);
+		if (!workflow.getStatus().isTerminal()) {
+			logger.error("Workflow is still running.  status=" + workflow.getStatus()+",workflowId="+workflow.getWorkflowId()+",correlationId="+workflow.getCorrelationId());
+			throw new ApplicationException(Code.CONFLICT, "Workflow is still running.  status=" + workflow.getStatus());
+		}
+		if (workflow.getTasks().isEmpty()) {
+			logger.error("Workflow has not started yet.  status=" + workflow.getStatus()+",workflowId="+workflow.getWorkflowId()+",correlationId="+workflow.getCorrelationId());
+			throw new ApplicationException(Code.CONFLICT, "Workflow has not started yet");
+		}
+		int lastIndex = workflow.getTasks().size() - 1;
+		Task last = workflow.getTasks().get(lastIndex);
+		if (!last.getStatus().isTerminal()) {
+			throw new ApplicationException(Code.CONFLICT,
+					"The last task is still not completed!  I can only retry the last failed task.  Use restart if you want to attempt entire workflow execution again.");
+		}
+		if (last.getStatus().isSuccessful()) {
+			throw new ApplicationException(Code.CONFLICT,
+					"The last task has not failed!  I can only retry the last failed task.  Use restart if you want to attempt entire workflow execution again.");
+		}
+
+		// Below is the situation where currently when the task failure causes
+		// workflow to fail, the task's retried flag is not updated. This is to
+		// update for these old tasks.
+		List<Task> update = workflow.getTasks().stream().filter(task -> !task.isRetried()).collect(Collectors.toList());
+		update.forEach(task -> task.setRetried(true));
+		edao.updateTasks(update);
+
+		Task retried = last.copy();
+		retried.setTaskId(IDGenerator.generate());
+		retried.setRetriedTaskId(last.getTaskId());
+		retried.setStatus(Status.SCHEDULED);
+		retried.setRetryCount(last.getRetryCount() + 1);
+		scheduleTask(workflow, Arrays.asList(retried));
+
+		workflow.setStatus(WorkflowStatus.RUNNING);
+		edao.updateWorkflow(workflow);
+
+		decide(workflowId);
+
+		RetryStatus retrystat=new RetryStatus();
+		retrystat.setStatus(retried.getStatus().toString());
+		return retrystat;
 	}
 
 	public List<Workflow> getStatusByCorrelationId(String workflowName, String correlationId, boolean includeClosed) throws Exception {
