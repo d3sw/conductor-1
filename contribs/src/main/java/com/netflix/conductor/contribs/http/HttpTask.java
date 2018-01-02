@@ -43,6 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class HttpTask extends GenericHttpTask {
 	private static final Logger logger = LoggerFactory.getLogger(HttpTask.class);
 	public static final String REQUEST_PARAMETER_NAME = "http_request";
+	public static final String RESPONSE_PARAMETER_NAME = "http_response";
 	static final String MISSING_REQUEST = "Missing HTTP request. Task input MUST have a '" + REQUEST_PARAMETER_NAME + "' key wiht HttpTask.Input as value. See documentation for HttpTask for required input parameters";
 	public static final String NAME = "HTTP";
 	private static final String CONDITIONS_PARAMETER = "conditions";
@@ -58,11 +59,13 @@ public class HttpTask extends GenericHttpTask {
 		Map<String, Object> taskInput = task.getInputData();
 		Map<String, Object> taskOutput = task.getOutputData();
 		Object request = task.getInputData().get(REQUEST_PARAMETER_NAME);
+		Object responseConditions = task.getInputData().get(RESPONSE_PARAMETER_NAME);
 		task.setWorkerId(config.getServerId());
 		String url = null;
 		Input input = om.convertValue(request, Input.class);
+		Output output = om.convertValue(responseConditions, Output.class);
 		Map<String, String> conditionsObj=new HashMap<String, String>();
-		conditionsObj=input.getConditions();
+		conditionsObj=output.getConditions();
 		if (request == null) {
 			task.setReasonForIncompletion(MISSING_REQUEST);
 			task.setStatus(Status.FAILED);
@@ -113,7 +116,7 @@ public class HttpTask extends GenericHttpTask {
 			// http task validation
 			// Default is true. Will be set to false upon some condition fails
 			    AtomicBoolean overallStatus = new AtomicBoolean(true);
-				Object payloadObj = response.asMap().get("body");
+				Object payloadObj = response.asMap();
 				String overallReason = (String) taskInput.get(REASON_PARAMETER);
 				boolean failOnFalse = getFailOnFalse(task);
 				if (conditionsObj != null) {
