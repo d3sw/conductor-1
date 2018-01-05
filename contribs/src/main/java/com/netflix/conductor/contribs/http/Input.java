@@ -33,8 +33,6 @@ public class Input {
 
 	private String curtimestamp;
 
-	private Map<String, String> conditions;
-
 	/**
 	 * @return the method
 	 */
@@ -47,19 +45,6 @@ public class Input {
 	 */
 	public void setMethod(String method) {
 		this.method = method;
-	}
-
-
-
-	public Map<String, String> getConditions() {
-		return conditions;
-	}
-
-	/**
-	 * @param conditions the method to set
-	 */
-	public void setConditions(Map<String, String> conditions) {
-		this.conditions = conditions;
 	}
 
 	/**
