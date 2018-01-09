@@ -13,6 +13,8 @@ public class Output {
 
 	private Map<String, String> conditions;
 
+	private String reasonParameter;
+
 
 	public Map<String, String> getConditions() {
 		return conditions;
@@ -25,5 +27,19 @@ public class Output {
 		this.conditions = conditions;
 	}
 
+
+	/**
+	 * @return the reasonParameter
+	 */
+	public String getReasonParameter() {
+		return reasonParameter;
+	}
+
+	/**
+	 * @param reasonParameter the reasonParameter to set
+	 */
+	public void setReasonParameter(String reasonParameter) {
+		this.reasonParameter = reasonParameter;
+	}
 
 }
