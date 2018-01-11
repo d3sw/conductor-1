@@ -41,6 +41,7 @@ import com.netflix.conductor.common.metadata.workflow.RerunWorkflowRequest;
 import com.netflix.conductor.common.metadata.workflow.SkipTaskRequest;
 import com.netflix.conductor.common.metadata.workflow.StartWorkflowRequest;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
+import com.netflix.conductor.common.run.RetryStatus;
 import com.netflix.conductor.common.run.SearchResult;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.WorkflowSummary;
@@ -206,6 +207,14 @@ public class WorkflowResource {
 	@Consumes(MediaType.WILDCARD)
 	public void retry(@PathParam("workflowId") String workflowId) throws Exception {		
 		executor.retry(workflowId);
+	}
+
+	@GET
+	@Path("/retryReturnStatus/{workflowId}")
+	@ApiOperation("Retries the last failed task and returns the last failed task status")
+	@Consumes(MediaType.WILDCARD)
+	public RetryStatus retryReturnStatus(@PathParam("workflowId") String workflowId) throws Exception {
+		return executor.retryReturnStatus(workflowId);
 	}
 	
 	@DELETE
