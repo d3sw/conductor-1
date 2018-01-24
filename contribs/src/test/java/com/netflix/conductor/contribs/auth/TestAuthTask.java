@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+import com.netflix.conductor.auth.AuthManager;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.config.Configuration;
@@ -40,7 +41,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -87,43 +89,7 @@ public class TestAuthTask {
 		when(config.getProperty("conductor.auth.url", null)).thenReturn("http://localhost:7010/auth/success");
 		when(config.getProperty("conductor.auth.clientId", null)).thenReturn("clientId");
 		when(config.getProperty("conductor.auth.clientSecret", null)).thenReturn("clientSecret");
-		authTask = new AuthTask(config);
-	}
-
-	@Test
-	public void no_conductor_auth_url() throws Exception {
-		Configuration config = mock(Configuration.class);
-		AuthTask authTask = new AuthTask(config);
-
-		Task task = new Task();
-		authTask.start(workflow, task, executor);
-		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("Missing system property conductor.auth.url", task.getReasonForIncompletion());
-	}
-
-	@Test
-	public void no_conductor_auth_clientId() throws Exception {
-		Configuration config = mock(Configuration.class);
-		when(config.getProperty("conductor.auth.url", null)).thenReturn("http://localhost");
-		AuthTask authTask = new AuthTask(config);
-
-		Task task = new Task();
-		authTask.start(workflow, task, executor);
-		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("Missing system property conductor.auth.clientId", task.getReasonForIncompletion());
-	}
-
-	@Test
-	public void no_conductor_auth_clientSecret() throws Exception {
-		Configuration config = mock(Configuration.class);
-		when(config.getProperty("conductor.auth.url", null)).thenReturn("http://localhost");
-		when(config.getProperty("conductor.auth.clientId", null)).thenReturn("deluxe.conductor");
-		AuthTask authTask = new AuthTask(config);
-
-		Task task = new Task();
-		authTask.start(workflow, task, executor);
-		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("Missing system property conductor.auth.clientSecret", task.getReasonForIncompletion());
+		authTask = new AuthTask(new AuthManager(config));
 	}
 
 	@Test
@@ -139,34 +105,34 @@ public class TestAuthTask {
 	}
 
 	@Test
-	public void validate_no_accessToken() throws Exception {
+	public void validate_no_token() throws Exception {
 		Task task = new Task();
 		Map<String, Object> inputData = task.getInputData();
 		inputData.put("validate", new HashMap<>());
 
 		authTask.start(workflow, task, executor);
 		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("No 'accessToken' parameter provided in 'validate' object", task.getReasonForIncompletion());
+		assertEquals("No 'token' parameter provided in 'validate' object", task.getReasonForIncompletion());
 	}
 
 	@Test
-	public void validate_no_verifyList() throws Exception {
+	public void validate_no_rules() throws Exception {
 		Task task = new Task();
 		Map<String, Object> validate = new HashMap<>();
-		validate.put("accessToken", accessToken);
+		validate.put("token", accessToken);
 
 		Map<String, Object> inputData = task.getInputData();
 		inputData.put("validate", validate);
 
 		authTask.start(workflow, task, executor);
 		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("No 'verifyList' parameter provided in 'validate' object", task.getReasonForIncompletion());
+		assertEquals("No 'rules' parameter provided in 'validate' object", task.getReasonForIncompletion());
 	}
 
 	@Test
 	public void validate_empty_accessToken() throws Exception {
 		Map<String, Object> validate = new HashMap<>();
-		validate.put("accessToken", "");
+		validate.put("token", "");
 
 		Task task = new Task();
 		Map<String, Object> inputData = task.getInputData();
@@ -174,14 +140,14 @@ public class TestAuthTask {
 
 		authTask.start(workflow, task, executor);
 		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("Parameter 'accessToken' is empty", task.getReasonForIncompletion());
+		assertEquals("Parameter 'token' is empty", task.getReasonForIncompletion());
 	}
 
 	@Test
-	public void validate_wrong_verifyList() throws Exception {
+	public void validate_wrong_rules() throws Exception {
 		Map<String, Object> validate = new HashMap<>();
-		validate.put("accessToken", accessToken);
-		validate.put("verifyList", "wrong type");
+		validate.put("token", accessToken);
+		validate.put("rules", "wrong type");
 
 		Task task = new Task();
 		Map<String, Object> inputData = task.getInputData();
@@ -189,33 +155,42 @@ public class TestAuthTask {
 
 		authTask.start(workflow, task, executor);
 		assertEquals(Task.Status.FAILED, task.getStatus());
-		assertEquals("Invalid 'verifyList' input parameter. It must be a list", task.getReasonForIncompletion());
+		assertEquals("Invalid 'rules' input parameter. It must be an object", task.getReasonForIncompletion());
 	}
 
 	@Test
 	public void validate_success() throws Exception {
 		Task task = new Task();
+
+		Map<String, Object> rules = new HashMap<>();
+		rules.put("realm_access_roles",".realm_access.roles | contains([\"uma_authorization\"])");
+
 		Map<String, Object> validate = new HashMap<>();
-		validate.put("accessToken", accessToken);
-		validate.put("verifyList", Collections.singletonList(".realm_access.roles | contains([\"uma_authorization\"])"));
+		validate.put("token", accessToken);
+		validate.put("rules", rules);
 
 		Map<String, Object> inputData = task.getInputData();
 		inputData.put("validate", validate);
 
 		authTask.start(workflow, task, executor);
+		System.out.println("task.getOutputData() = " + task.getOutputData());
 		assertEquals(Task.Status.COMPLETED, task.getStatus());
 
 		Map<String, Object> outputData = task.getOutputData();
 		assertEquals(true, outputData.get("success"));
-		assertEquals(null, outputData.get("failedList"));
+		assertEquals(null, outputData.get("failed"));
 	}
 
 	@Test
 	public void validate_not_success_failed() throws Exception {
 		Task task = new Task();
+
+		Map<String, Object> rules = new HashMap<>();
+		rules.put("dummy_rule",".dummy.object");
+
 		Map<String, Object> validate = new HashMap<>();
-		validate.put("accessToken", accessToken);
-		validate.put("verifyList", Collections.singletonList(".dummy.object"));
+		validate.put("token", accessToken);
+		validate.put("rules", rules);
 
 		Map<String, Object> inputData = task.getInputData();
 		inputData.put("validate", validate);
@@ -225,26 +200,26 @@ public class TestAuthTask {
 
 		Map<String, Object> outputData = task.getOutputData();
 		assertEquals(false, outputData.get("success"));
-		List<Map<String, Object>> failedList = (List<Map<String, Object>>)outputData.get("failedList");
-		assertNotNull("No failedList", failedList);
-		assertEquals(1, failedList.size());
-		Iterator<Map.Entry<String, Object>> iterator = failedList.iterator().next().entrySet().iterator();
 
-		Map.Entry<String, Object> entry1 = iterator.next();
-		assertEquals("result", entry1.getKey());
-		assertEquals(false, entry1.getValue());
+		Map<String, Object> failed = (Map<String, Object>)outputData.get("failed");
+		assertNotNull("No failed", failed);
+		assertEquals(1, failed.size());
 
-		Map.Entry<String, Object> entry2 = iterator.next();
-		assertEquals("condition", entry2.getKey());
-		assertEquals(".dummy.object", entry2.getValue());
+		Map.Entry<String, Object> entry = failed.entrySet().iterator().next();
+		assertEquals("dummy_rule", entry.getKey());
+		assertEquals(false, entry.getValue());
 	}
 
 	@Test
 	public void validate_not_success_completed() throws Exception {
 		Task task = new Task();
+
+		Map<String, Object> rules = new HashMap<>();
+		rules.put("dummy_rule",".dummy.object");
+
 		Map<String, Object> validate = new HashMap<>();
-		validate.put("accessToken", accessToken);
-		validate.put("verifyList", Collections.singletonList(".dummy.object"));
+		validate.put("token", accessToken);
+		validate.put("rules", rules);
 
 		Map<String, Object> inputData = task.getInputData();
 		inputData.put("failOnError", false);
@@ -255,18 +230,14 @@ public class TestAuthTask {
 
 		Map<String, Object> outputData = task.getOutputData();
 		assertEquals(false, outputData.get("success"));
-		List<Map<String, Object>> failedList = (List<Map<String, Object>>)outputData.get("failedList");
-		assertNotNull("No failedList", failedList);
-		assertEquals(1, failedList.size());
-		Iterator<Map.Entry<String, Object>> iterator = failedList.iterator().next().entrySet().iterator();
 
-		Map.Entry<String, Object> entry1 = iterator.next();
-		assertEquals("result", entry1.getKey());
-		assertEquals(false, entry1.getValue());
+		Map<String, Object> failed = (Map<String, Object>)outputData.get("failed");
+		assertNotNull("No failed", failed);
+		assertEquals(1, failed.size());
 
-		Map.Entry<String, Object> entry2 = iterator.next();
-		assertEquals("condition", entry2.getKey());
-		assertEquals(".dummy.object", entry2.getValue());
+		Map.Entry<String, Object> entry = failed.entrySet().iterator().next();
+		assertEquals("dummy_rule", entry.getKey());
+		assertEquals(false, entry.getValue());
 	}
 
 	@Test
@@ -287,7 +258,7 @@ public class TestAuthTask {
 		when(config.getProperty("conductor.auth.url", null)).thenReturn("http://localhost:7010/auth/empty");
 		when(config.getProperty("conductor.auth.clientId", null)).thenReturn("clientId");
 		when(config.getProperty("conductor.auth.clientSecret", null)).thenReturn("clientSecret");
-		AuthTask authTask = new AuthTask(config);
+		AuthTask authTask = new AuthTask(new AuthManager(config));
 
 		Task task = new Task();
 		authTask.start(workflow, task, executor);
@@ -305,7 +276,7 @@ public class TestAuthTask {
 		when(config.getProperty("conductor.auth.url", null)).thenReturn("http://localhost:7010/auth/error");
 		when(config.getProperty("conductor.auth.clientId", null)).thenReturn("clientId");
 		when(config.getProperty("conductor.auth.clientSecret", null)).thenReturn("clientSecret");
-		AuthTask authTask = new AuthTask(config);
+		AuthTask authTask = new AuthTask(new AuthManager(config));
 
 		Task task = new Task();
 		authTask.start(workflow, task, executor);
@@ -323,7 +294,7 @@ public class TestAuthTask {
 		when(config.getProperty("conductor.auth.url", null)).thenReturn("http://localhost:7010/auth/error");
 		when(config.getProperty("conductor.auth.clientId", null)).thenReturn("clientId");
 		when(config.getProperty("conductor.auth.clientSecret", null)).thenReturn("clientSecret");
-		authTask = new AuthTask(config);
+		authTask = new AuthTask(new AuthManager(config));
 
 		Task task = new Task();
 		task.getInputData().put("failOnError", false);
