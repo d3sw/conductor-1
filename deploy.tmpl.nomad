@@ -140,7 +140,7 @@ job "conductor" {
         port = "http"
         check {
           type     = "http"
-          path     = "/"
+          path     = "/api/v1/status"
           interval = "10s"
           timeout  = "3s"
         }
