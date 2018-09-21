@@ -31,7 +31,6 @@ public class AssetMonitor implements JavaEventAction {
 	private final ExecutionDAO edao;
 	private final ObjectMapper om;
 
-
 	@Inject
 	public AssetMonitor(WorkflowExecutor executor, ExecutionDAO edao, ObjectMapper om) {
 		this.executor = executor;
@@ -195,8 +194,15 @@ public class AssetMonitor implements JavaEventAction {
 
 			// Skip if any of the messageParameters does not match the workflowParameters
 			boolean anyNotEqual = messageParameters.entrySet().stream().anyMatch(entry -> {
-				String value = workflowParameters.get(entry.getKey());
-				return !entry.getValue().equalsIgnoreCase(value);
+				String wfValue = workflowParameters.get(entry.getKey());
+				String msgValue = entry.getValue();
+				if (StringUtils.isEmpty(wfValue) && StringUtils.isEmpty(msgValue)) {
+					return false;
+				} else if (StringUtils.isNotEmpty(msgValue)) {
+					return !msgValue.equalsIgnoreCase(wfValue);
+				} else {
+					return !wfValue.equalsIgnoreCase(msgValue);
+				}
 			});
 			if (anyNotEqual) {
 				continue;
