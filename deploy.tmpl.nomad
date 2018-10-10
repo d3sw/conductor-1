@@ -99,119 +99,119 @@ job "conductor" {
     } // end ui task
   } // end ui group
 
-  group "server" {
-    count = 3
-
-    constraint {
-      operator  = "distinct_property"
-      attribute = "${attr.platform.aws.placement.availability-zone}"
-    }
-
-    # vault declaration
-    vault {
-      change_mode = "noop"
-      env = false
-      policies = ["read-secrets"]
-    }
-
-    task "server" {
-      meta {
-        product-class = "custom"
-        stack-role = "api"
-      }
-      driver = "docker"
-      config {
-        image = "583623634344.dkr.ecr.us-west-2.amazonaws.com/conductor:<APP_VERSION>-server"
-        port_map {
-          http = 8080
-        }
-        volumes = [
-          "local/secrets/conductor-server.env:/app/config/secrets.env"
-        ]
-        labels {
-          service = "${NOMAD_JOB_NAME}"
-        }
-        logging {
-          type = "syslog"
-          config {
-            tag = "${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}"
-          }
-        }
-      }
-      env {
-        trigger = "1"
-        TLD   = "<TLD>"
-        STACK = "<ENV_TYPE>"
-        APP_VERSION = "<APP_VERSION>"
-
-        // Database settings
-        db = "elasticsearch"
-
-        // Workflow settings
-        workflow_auth_validate = "true"
-        workflow_failure_expandInline = "false"
-        decider_sweep_frequency_seconds = "5"
-        workflow_event_processor_refresh_seconds = "30"
-        workflow_system_task_worker_poll_frequency = "5000"
-        workflow_system_task_worker_queue_size = "300"
-        workflow_sweeper_frequency = "5000"
-        workflow_sweeper_thread_count = 10
-
-        // Elasticsearch settings.
-        workflow_elasticsearch_mode = "elasticsearch"
-        workflow_elasticsearch_initial_sleep_seconds = "30"
-
-        // NATS settings
-        io_nats_streaming_url = "nats://nats.service.<TLD>:4222"
-        io_nats_streaming_clusterId = "events-streaming"
-        io_nats_streaming_durableName = "conductor-server-<TLD>"
-        io_nats_streaming_publishRetryIn = "5,10,15"
-
-        // Additional nats & asset modules
-        conductor_additional_modules = "com.netflix.conductor.contribs.NatsStreamModule,com.netflix.conductor.contribs.AssetModule"
-
-        // Exclude demo workflows
-        loadSample = "false"
-
-        // The following will be provided by secret/conductor
-        //  - conductor_auth_url
-        //  - conductor_auth_clientId
-        //  - conductor_auth_clientSecret
-        //  - workflow_elasticsearch_url
-      }
-      service {
-        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.<DM_TLD>/ auth=true","urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.<TLD>/", "metrics=${NOMAD_JOB_NAME}"]
-        name = "${JOB}-${TASK}"
-        port = "http"
-        check {
-          type     = "http"
-          path     = "/"
-          interval = "10s"
-          timeout  = "3s"
-        }
-      }
-
-      # Write secrets to the file that can be mounted as volume
-      template {
-        data = <<EOF
-        {{ with printf "secret/%s" (env "NOMAD_JOB_NAME") | secret }}{{ range $k, $v := .Data }}{{ $k }}={{ $v }}
-        {{ end }}{{ end }}
-        EOF
-        destination   = "local/secrets/conductor-server.env"
-        change_mode   = "signal"
-        change_signal = "SIGINT"
-      }
-
-      resources {
-        cpu    = 256  # MHz
-        memory = 2048 # MB
-        network {
-          mbits = 4
-          port "http" {}
-        }
-      }
-    } // end server task
-  } // end server group
+//  group "server" {
+//    count = 3
+//
+//    constraint {
+//      operator  = "distinct_property"
+//      attribute = "${attr.platform.aws.placement.availability-zone}"
+//    }
+//
+//    # vault declaration
+//    vault {
+//      change_mode = "noop"
+//      env = false
+//      policies = ["read-secrets"]
+//    }
+//
+//    task "server" {
+//      meta {
+//        product-class = "custom"
+//        stack-role = "api"
+//      }
+//      driver = "docker"
+//      config {
+//        image = "583623634344.dkr.ecr.us-west-2.amazonaws.com/conductor:<APP_VERSION>-server"
+//        port_map {
+//          http = 8080
+//        }
+//        volumes = [
+//          "local/secrets/conductor-server.env:/app/config/secrets.env"
+//        ]
+//        labels {
+//          service = "${NOMAD_JOB_NAME}"
+//        }
+//        logging {
+//          type = "syslog"
+//          config {
+//            tag = "${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}"
+//          }
+//        }
+//      }
+//      env {
+//        trigger = "1"
+//        TLD   = "<TLD>"
+//        STACK = "<ENV_TYPE>"
+//        APP_VERSION = "<APP_VERSION>"
+//
+//        // Database settings
+//        db = "elasticsearch"
+//
+//        // Workflow settings
+//        workflow_auth_validate = "true"
+//        workflow_failure_expandInline = "false"
+//        decider_sweep_frequency_seconds = "5"
+//        workflow_event_processor_refresh_seconds = "30"
+//        workflow_system_task_worker_poll_frequency = "5000"
+//        workflow_system_task_worker_queue_size = "300"
+//        workflow_sweeper_frequency = "5000"
+//        workflow_sweeper_thread_count = 10
+//
+//        // Elasticsearch settings.
+//        workflow_elasticsearch_mode = "elasticsearch"
+//        workflow_elasticsearch_initial_sleep_seconds = "30"
+//
+//        // NATS settings
+//        io_nats_streaming_url = "nats://nats.service.<TLD>:4222"
+//        io_nats_streaming_clusterId = "events-streaming"
+//        io_nats_streaming_durableName = "conductor-server-<TLD>"
+//        io_nats_streaming_publishRetryIn = "5,10,15"
+//
+//        // Additional nats & asset modules
+//        conductor_additional_modules = "com.netflix.conductor.contribs.NatsStreamModule,com.netflix.conductor.contribs.AssetModule"
+//
+//        // Exclude demo workflows
+//        loadSample = "false"
+//
+//        // The following will be provided by secret/conductor
+//        //  - conductor_auth_url
+//        //  - conductor_auth_clientId
+//        //  - conductor_auth_clientSecret
+//        //  - workflow_elasticsearch_url
+//      }
+//      service {
+//        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.<DM_TLD>/ auth=true","urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.<TLD>/", "metrics=${NOMAD_JOB_NAME}"]
+//        name = "${JOB}-${TASK}"
+//        port = "http"
+//        check {
+//          type     = "http"
+//          path     = "/"
+//          interval = "10s"
+//          timeout  = "3s"
+//        }
+//      }
+//
+//      # Write secrets to the file that can be mounted as volume
+//      template {
+//        data = <<EOF
+//        {{ with printf "secret/%s" (env "NOMAD_JOB_NAME") | secret }}{{ range $k, $v := .Data }}{{ $k }}={{ $v }}
+//        {{ end }}{{ end }}
+//        EOF
+//        destination   = "local/secrets/conductor-server.env"
+//        change_mode   = "signal"
+//        change_signal = "SIGINT"
+//      }
+//
+//      resources {
+//        cpu    = 256  # MHz
+//        memory = 2048 # MB
+//        network {
+//          mbits = 4
+//          port "http" {}
+//        }
+//      }
+//    } // end server task
+//  } // end server group
 
   group "search" {
     count = 3
