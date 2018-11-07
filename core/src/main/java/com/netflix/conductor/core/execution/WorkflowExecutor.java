@@ -502,7 +502,6 @@ public class WorkflowExecutor {
 		workflow.setStatus(WorkflowStatus.COMPLETED);
 		workflow.setOutput(wf.getOutput());
 		edao.updateWorkflow(workflow);
-		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 
 		// If the following task, for some reason fails, the sweep will take
 		// care of this again!
@@ -510,6 +509,9 @@ public class WorkflowExecutor {
 			Workflow parent = edao.getWorkflow(workflow.getParentWorkflowId(), false);
 			decide(parent.getWorkflowId());
 		}
+
+		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
+
 		Monitors.recordWorkflowCompletion(workflow.getWorkflowType(), workflow.getEndTime() - workflow.getStartTime());
 
 		// send wf end message
@@ -535,7 +537,6 @@ public class WorkflowExecutor {
 		String workflowId = workflow.getWorkflowId();
 		workflow.setReasonForIncompletion(reason);
 		edao.updateWorkflow(workflow);
-		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 		logger.error("Workflow is cancelled.workflowId="+workflowId+",correlationId="+workflow.getCorrelationId());
 		cancelTasks(workflow, workflow.getTasks());
 
@@ -574,6 +575,7 @@ public class WorkflowExecutor {
 				Monitors.recordWorkflowStartError(cancelWorkflow);
 			}
 		}
+		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 
 		// metrics
 		Monitors.recordWorkflowCancel(workflow.getWorkflowType());
@@ -594,7 +596,6 @@ public class WorkflowExecutor {
 
 		workflow.setReasonForIncompletion(reason);
 		edao.updateWorkflow(workflow);
-		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 		logger.error("Workflow has been reset.workflowId="+workflowId+",correlationId="+workflow.getCorrelationId());
 		cancelTasks(workflow, workflow.getTasks());
 
@@ -604,6 +605,7 @@ public class WorkflowExecutor {
 			Workflow parent = edao.getWorkflow(workflow.getParentWorkflowId(), false);
 			decide(parent.getWorkflowId());
 		}
+		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 
 		// metrics
 		Monitors.recordWorkflowReset(workflow.getWorkflowType());
