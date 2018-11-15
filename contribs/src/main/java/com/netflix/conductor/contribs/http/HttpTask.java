@@ -55,7 +55,7 @@ public class HttpTask extends GenericHttpTask {
 	public HttpTask(RestClientManager rcm, Configuration config, ObjectMapper om, AuthManager auth) {
 		super(NAME, config, rcm, om, auth);
 		unackTimeout = config.getIntProperty("workflow.system.task.http.unack.timeout", 60);
-		isAsync = Boolean.getBoolean(config.getProperty("workflow.system.task.http.isAsync", "true"));
+		isAsync = Boolean.parseBoolean(config.getProperty("workflow.system.task.http.isAsync", "true"));
 		logger.debug("HttpTask initialized...");
 	}
 
