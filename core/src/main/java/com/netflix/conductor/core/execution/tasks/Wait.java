@@ -44,17 +44,19 @@ public class Wait extends WorkflowSystemTask {
 
 	@Override
 	public void start(Workflow workflow, Task task, WorkflowExecutor executor) throws Exception {
-		System.out.println("wait started " + task);
-		task.setStatus(Status.IN_PROGRESS);
+		if (!execute(workflow, task, executor)) {
+			task.setStatus(Status.IN_PROGRESS);
+		}
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
 	public boolean execute(Workflow workflow, Task task, WorkflowExecutor executor) throws Exception {
-		System.out.println("wait execute " + task);
 		Map<String, Object> eventWait = (Map<String, Object>)task.getInputData().get("event_wait");
+		if (MapUtils.isEmpty(eventWait)) {
+			return false;
+		}
 		Parameters params = executor.getMapper().convertValue(eventWait, Parameters.class);
-
 		Message msg = executor.findMessageByQuery(params.query);
 		if (msg == null) {
 			return false;
