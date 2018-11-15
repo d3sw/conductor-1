@@ -17,6 +17,7 @@ import com.netflix.conductor.core.execution.ApplicationException;
 import com.netflix.conductor.dao.IndexDAO;
 import com.netflix.conductor.dao.es6rest.parser.Expression;
 import com.netflix.conductor.metrics.Monitors;
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequest;
@@ -38,10 +39,7 @@ import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.QueryStringQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -85,6 +83,7 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
 
     private RestHighLevelClient client;
     private String execWorkflowIndexName;
+    private String execEventIndexName;
     private String execTaskIndexName;
     private String logMessageIndexName;
     private String logEventIndexName;
@@ -102,11 +101,13 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
         String stack = config.getStack();
         this.logIndexPrefix = rootIndexName + "." + taskLogPrefix + "." + stack;
         this.execTaskIndexName = rootIndexName + ".executions." + stack + ".task";
+        this.execEventIndexName = rootIndexName + ".executions." + stack + ".event";
         this.execWorkflowIndexName = rootIndexName + ".executions." + stack + ".workflow";
 
         try {
 
             ensureIndexExists(execTaskIndexName, RESOURCE_EXECUTIONS, "task");
+            ensureIndexExists(execEventIndexName, RESOURCE_EXECUTIONS, "event");
             ensureIndexExists(execWorkflowIndexName, RESOURCE_EXECUTIONS, "workflow");
 
             updateTaskLogIndexNames();
@@ -278,6 +279,24 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
 
     @Override
     public void addMessage(String queue, Message msg) {
+        try {
+            Object payload = om.readValue(msg.getPayload(), Object.class);
+            int indexOf = queue.indexOf(":");
+
+            Map<String, Object> doc = new HashMap<>();
+            doc.put("messageId", msg.getId());
+            doc.put("payload", payload);
+            doc.put("queue", indexOf > 0 ? queue.substring(0, indexOf) : queue);
+            doc.put("created", System.currentTimeMillis());
+
+            IndexRequest request = new IndexRequest(execEventIndexName, EVENT_DOC_TYPE, msg.getId());
+            request.source(doc);
+            client.index(request);
+
+        } catch (Exception e) {
+            log.error("Indexing failed {} for {} ", e.getMessage(), queue, e);
+        }
+
         int retry = 3;
         while (retry > 0) {
             try {
@@ -300,6 +319,35 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
                 }
             }
         }
+    }
+
+    @Override
+    public Message findByQuery(Map<String, Object> query) {
+        try {
+            SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+            sourceBuilder.query(QueryBuilders.wrapperQuery(om.writeValueAsBytes(query)));
+            sourceBuilder.size(1);
+            sourceBuilder.sort("created", SortOrder.DESC);
+
+            SearchRequest searchRequest = new SearchRequest(execEventIndexName).types(EVENT_DOC_TYPE);
+            searchRequest.source(sourceBuilder);
+
+            SearchResponse searchResponse = client.search(searchRequest);
+            SearchHits searchHits = searchResponse.getHits();
+            if (ArrayUtils.isNotEmpty(searchHits.getHits())) {
+                Map<String, Object> source = searchHits.getHits()[0].getSourceAsMap();
+
+                Message message = new Message();
+                message.setPayload(om.writeValueAsString(source.get("payload")));
+                message.setId(source.get("messageId").toString());
+
+                return message;
+            }
+
+        } catch (Exception ex) {
+            log.error("findByQuery failed {} for {}", ex.getMessage(), query, ex);
+        }
+        return null;
     }
 
     @Override

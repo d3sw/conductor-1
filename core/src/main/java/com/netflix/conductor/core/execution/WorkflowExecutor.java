@@ -47,6 +47,7 @@ import com.netflix.conductor.core.execution.tasks.WorkflowSystemTask;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.core.utils.QueueUtils;
 import com.netflix.conductor.dao.ExecutionDAO;
+import com.netflix.conductor.dao.IndexDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.metrics.Monitors;
@@ -84,6 +85,7 @@ public class WorkflowExecutor {
 
 	private DeciderService decider;
 
+	private ObjectMapper om;
 	private Configuration config;
 
 	private AuthManager auth;
@@ -92,6 +94,7 @@ public class WorkflowExecutor {
 	public static final String sweeperQueue = "_sweeperQueue";
 
 	private int activeWorkerLastPollnSecs;
+	private IndexDAO indexDAO;
 
 	private boolean validateAuth;
 	private boolean lazyDecider;
@@ -99,13 +102,17 @@ public class WorkflowExecutor {
 	private ParametersUtils pu = new ParametersUtils();
 
 	@Inject
-	public WorkflowExecutor(MetadataDAO metadata, ExecutionDAO edao, QueueDAO queue, ObjectMapper om, AuthManager auth, Configuration config) {
+	public WorkflowExecutor(MetadataDAO metadata, ExecutionDAO edao, QueueDAO queue,
+							ObjectMapper om, AuthManager auth, Configuration config,
+							IndexDAO indexDAO) {
 		this.metadata = metadata;
 		this.edao = edao;
 		this.queue = queue;
+		this.om = om;
 		this.config = config;
 		this.auth = auth;
 		activeWorkerLastPollnSecs = config.getIntProperty("tasks.active.worker.lastpoll", 10);
+		this.indexDAO = indexDAO;
 		this.decider = new DeciderService(metadata, om);
 		this.validateAuth = Boolean.parseBoolean(config.getProperty("workflow.auth.validate", "false"));
 		this.lazyDecider = Boolean.parseBoolean(config.getProperty("workflow.lazy.decider", "false"));
@@ -1446,6 +1453,14 @@ public class WorkflowExecutor {
 
 	public Task getTask(String taskId) {
 		return edao.getTask(taskId);
+	}
+
+	public ObjectMapper getMapper() {
+		return om;
+	}
+
+	public Message findMessageByQuery(Map<String, Object> query) {
+		return indexDAO.findByQuery(query);
 	}
 
 	private void cancelTasks(Workflow workflow, List<Task> tasks) throws Exception {

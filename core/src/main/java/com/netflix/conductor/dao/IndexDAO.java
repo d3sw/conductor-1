@@ -15,14 +15,15 @@
  */
 package com.netflix.conductor.dao;
 
-import java.util.List;
-
 import com.netflix.conductor.common.metadata.events.EventExecution;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskExecLog;
 import com.netflix.conductor.common.run.SearchResult;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.events.queue.Message;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 
@@ -102,5 +103,9 @@ public interface IndexDAO {
 	 * @param msg Message
 	 */
 	public void addMessage(String queue, Message msg);
+
+	public default Message findByQuery(Map<String, Object> query) {
+		throw new RuntimeException("Not implemented");
+	}
 
 }

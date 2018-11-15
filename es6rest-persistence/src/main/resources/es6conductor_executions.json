@@ -91,5 +91,24 @@
         "type": "keyword"
       }
     }
+  },
+  "event": {
+    "properties": {
+      "messageId": {
+        "type": "keyword"
+      },
+      "queue": {
+        "type": "keyword"
+      },
+      "created": {
+        "type": "long"
+      },
+      "payload": {
+        "type": "object",
+        "dynamic": true,
+        "enabled": true
+      }
+    }
   }
+
 }
