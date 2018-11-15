@@ -49,11 +49,13 @@ public class HttpTask extends GenericHttpTask {
 	public static final String NAME = "HTTP";
 	private static final String CONDITIONS_PARAMETER = "conditions";
 	private int unackTimeout;
+	private boolean isAsync;
 
 	@Inject
 	public HttpTask(RestClientManager rcm, Configuration config, ObjectMapper om, AuthManager auth) {
 		super(NAME, config, rcm, om, auth);
 		unackTimeout = config.getIntProperty("workflow.system.task.http.unack.timeout", 60);
+		isAsync = Boolean.getBoolean(config.getProperty("workflow.system.task.http.isAsync", "true"));
 		logger.debug("HttpTask initialized...");
 	}
 
@@ -153,7 +155,7 @@ public class HttpTask extends GenericHttpTask {
 
 	@Override
 	public boolean isAsync() {
-		return true;
+		return isAsync;
 	}
 
 	@Override
