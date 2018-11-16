@@ -39,7 +39,10 @@ import org.elasticsearch.common.document.DocumentField;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.query.*;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -81,6 +84,7 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
         sdf.setTimeZone(gmt);
     }
 
+    private List<String> eventWaitSubjects;
     private RestHighLevelClient client;
     private String execWorkflowIndexName;
     private String execEventIndexName;
@@ -103,6 +107,9 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
         this.execTaskIndexName = rootIndexName + ".executions." + stack + ".task";
         this.execEventIndexName = rootIndexName + ".executions." + stack + ".event";
         this.execWorkflowIndexName = rootIndexName + ".executions." + stack + ".workflow";
+
+        String[] arr = config.getProperty("event.wait.subjects", ",").split(",");
+        eventWaitSubjects = Arrays.asList(arr);
 
         try {
 
@@ -280,19 +287,20 @@ public class Elasticsearch6RestIndexDAO implements IndexDAO {
     @Override
     public void addMessage(String queue, Message msg) {
         try {
-            Object payload = om.readValue(msg.getPayload(), Object.class);
             int indexOf = queue.indexOf(":");
+            String subject = indexOf > 0 ? queue.substring(0, indexOf) : queue;
+            if (eventWaitSubjects.contains(subject)) {
+                Object payload = om.readValue(msg.getPayload(), Object.class);
+                Map<String, Object> doc = new HashMap<>();
+                doc.put("messageId", msg.getId());
+                doc.put("payload", payload);
+                doc.put("queue", subject);
+                doc.put("created", System.currentTimeMillis());
 
-            Map<String, Object> doc = new HashMap<>();
-            doc.put("messageId", msg.getId());
-            doc.put("payload", payload);
-            doc.put("queue", indexOf > 0 ? queue.substring(0, indexOf) : queue);
-            doc.put("created", System.currentTimeMillis());
-
-            IndexRequest request = new IndexRequest(execEventIndexName, EVENT_DOC_TYPE, msg.getId());
-            request.source(doc);
-            client.index(request);
-
+                IndexRequest request = new IndexRequest(execEventIndexName, EVENT_DOC_TYPE, msg.getId());
+                request.source(doc);
+                client.index(request);
+            }
         } catch (Exception e) {
             log.error("Indexing failed {} for {} ", e.getMessage(), queue, e);
         }
