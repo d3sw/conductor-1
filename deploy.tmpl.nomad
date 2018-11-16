@@ -160,7 +160,7 @@ job "conductor" {
         workflow_sweeper_batch_sherlock_worker_count = 100
         workflow_sweeper_batch_names = "sherlock"
         workflow_lazy_decider = "true"
-        event_wait_subjects = "deluxe.vfs.upload.event"
+        event_wait_subjects = "deluxe.vfs.upload.event,deluxe.checksum.checksums.status"
 
         // Elasticsearch settings.
         workflow_elasticsearch_mode = "elasticsearch"
