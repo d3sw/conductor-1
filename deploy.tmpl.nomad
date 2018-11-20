@@ -178,12 +178,13 @@ job "conductor" {
 
         // Exclude demo workflows
         loadSample = "false"
-
+        
         // The following will be provided by secret/conductor
         //  - conductor_auth_url
         //  - conductor_auth_clientId
         //  - conductor_auth_clientSecret
         //  - workflow_elasticsearch_url
+        //
       }
       service {
         tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.<DM_TLD>/ auth=true","urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.<TLD>/", "metrics=${NOMAD_JOB_NAME}"]
