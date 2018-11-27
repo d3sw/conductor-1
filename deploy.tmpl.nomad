@@ -160,6 +160,7 @@ job "conductor" {
         workflow_sweeper_batch_sherlock_worker_count = 100
         workflow_sweeper_batch_names = "sherlock"
         workflow_lazy_decider = "false"
+        event_processor_enable_retries = "true"
 
         // Elasticsearch settings.
         workflow_elasticsearch_mode = "elasticsearch"

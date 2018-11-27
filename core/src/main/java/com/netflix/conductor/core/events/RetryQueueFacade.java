@@ -7,33 +7,35 @@ import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.*;
 import com.netflix.conductor.core.events.queue.Message;
 
-import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class RetryQueuePooler {
+@Singleton
+public class RetryQueueFacade {
     private AmazonSQS sqs;
-    private String queueName;
-    private String queueURL;
-    private int visibilityTimeout;
 
-    public RetryQueuePooler(AmazonSQS sqs, String queueName, int visibilityTimeout) {
+    @Inject
+    public RetryQueueFacade(AmazonSQS sqs) {
         this.sqs = sqs;
-        this.queueName = queueName;
-        this.queueURL = getOrCreateQueue();
-        this.visibilityTimeout = visibilityTimeout;
     }
 
-    public void publish(List<Message> messages) {
+    public void publish(String queueName, List<Message> messages, int delaySeconds) {
+        String queueURL = fetchQueueUrls(queueName);
         SendMessageBatchRequest batch = new SendMessageBatchRequest(queueURL);
         messages.forEach(msg -> {
-            SendMessageBatchRequestEntry request = new SendMessageBatchRequestEntry(msg.getId(), msg.getPayload());
+            SendMessageBatchRequestEntry request = new SendMessageBatchRequestEntry();
+            request.setId(msg.getId());
+            request.setMessageBody(msg.getPayload());
+            request.setDelaySeconds(delaySeconds);
             batch.getEntries().add(request);
         });
-        SendMessageBatchResult result = sqs.sendMessageBatch(batch);
-        System.out.println("result = " + result);
+        sqs.sendMessageBatch(batch);
     }
 
-    public List<Message> receive(int size) {
+    public List<Message> receive(String queueName, int size, int visibilityTimeout) {
+        String queueURL = fetchQueueUrls(queueName);
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueURL)
                 .withVisibilityTimeout(visibilityTimeout)
@@ -44,10 +46,12 @@ public class RetryQueuePooler {
                 .collect(Collectors.toList());
     }
 
-    public List<String> delete(List<Message> messages) {
+    public List<String> delete(String queueName, List<Message> messages) {
         if (messages == null || messages.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
+
+        String queueURL = fetchQueueUrls(queueName);
 
         DeleteMessageBatchRequest batch = new DeleteMessageBatchRequest().withQueueUrl(queueURL);
         List<DeleteMessageBatchRequestEntry> entries = batch.getEntries();
@@ -56,10 +60,9 @@ public class RetryQueuePooler {
 
         DeleteMessageBatchResult result = sqs.deleteMessageBatch(batch);
         return result.getFailed().stream().map(BatchResultErrorEntry::getId).collect(Collectors.toList());
-
     }
 
-    private String getOrCreateQueue() {
+    private String fetchQueueUrls(String queueName) {
         ListQueuesRequest listQueuesRequest = new ListQueuesRequest().withQueueNamePrefix(queueName);
         ListQueuesResult listQueuesResult = sqs.listQueues(listQueuesRequest);
         List<String> queueUrls = listQueuesResult.getQueueUrls().stream().filter(u -> u.contains(queueName)).collect(Collectors.toList());
@@ -77,19 +80,26 @@ public class RetryQueuePooler {
         String secretKey = "KKPOuV+U5C3NGoL7prjrYUcVshCjpebR2uKexZjz";
         BasicAWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
 
-        AmazonSQS sqs = AmazonSQSClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();
+        AmazonSQS sqs = AmazonSQSClientBuilder.standard()
+                .withCredentials(new AWSStaticCredentialsProvider(awsCreds))
+                .build();
 
-        RetryQueuePooler queue = new RetryQueuePooler(sqs, "retry_find_update", 5);
+        RetryQueueFacade queue = new RetryQueueFacade(sqs);
 
-//        Message message = new Message();
-//        message.setId(UUID.randomUUID().toString());
-//        message.setPayload("foo=bar");
+//        List<Message> messages = new ArrayList<>(2);
+//        for (int i = 0; i < 2; i++) {
+//            Message message = new Message();
+//            message.setId(UUID.randomUUID().toString());
+//            message.setPayload("foo=bar" + i);
 //
-//        queue.publish(Collections.singletonList(message));
+//            messages.add(message);
+//        }
+//        queue.publish(messages, 30);
 
-        List<Message> messages = queue.receive(6);
-        System.out.println("messages = " + messages);
-
-        queue.delete(messages);
+        List<Message> received = queue.receive("retry_find_update", 2, 30);
+        System.out.println("received = " + received);
+//
+//        List<String> deleted = queue.delete(received);
+//        System.out.println("delete failed = " + deleted);
     }
 }
