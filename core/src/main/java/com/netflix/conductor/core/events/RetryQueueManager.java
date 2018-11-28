@@ -156,7 +156,7 @@ public class RetryQueueManager {
                     executors.submit(() -> {
                         NDC.push("event-retry-"+ UUID.randomUUID().toString());
                         try {
-                            logger.info("About to retry action={}, payload={}, event={}, messageId={}, retried={}",
+                            logger.debug("About to retry action={}, payload={}, event={}, messageId={}, retried={}",
                                     wrapper.action, wrapper.payload, wrapper.event, wrapper.eventId, wrapper.retried);
 
                             // Execute action
