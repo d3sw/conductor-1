@@ -21,9 +21,10 @@ package com.netflix.conductor.core.config;
 import com.google.inject.AbstractModule;
 import com.netflix.conductor.core.events.ActionProcessor;
 import com.netflix.conductor.core.events.EventProcessor;
+import com.netflix.conductor.core.events.RetryQueueManager;
 import com.netflix.conductor.core.events.queue.dyno.DynoEventQueueProvider;
-import com.netflix.conductor.core.execution.batch.BatchSweeper;
 import com.netflix.conductor.core.execution.WorkflowSweeper;
+import com.netflix.conductor.core.execution.batch.BatchSweeper;
 import com.netflix.conductor.core.execution.batch.SherlockBatchProcessor;
 import com.netflix.conductor.core.execution.tasks.*;
 
@@ -36,6 +37,7 @@ public class CoreModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
+		bind(RetryQueueManager.class).asEagerSingleton();
 		bind(DynoEventQueueProvider.class).asEagerSingleton();
 		bind(ActionProcessor.class).asEagerSingleton();
 		bind(EventProcessor.class).asEagerSingleton();		

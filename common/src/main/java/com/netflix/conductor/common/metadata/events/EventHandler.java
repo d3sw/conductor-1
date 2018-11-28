@@ -132,6 +132,10 @@ public class EventHandler {
 
 		private JavaAction java_action;
 
+		private Integer retryCount;
+
+		private Integer retryDelay;
+
 		/**
 		 * @return the action
 		 */
@@ -244,6 +248,22 @@ public class EventHandler {
 
 		public void setJava_action(JavaAction java_action) {
 			this.java_action = java_action;
+		}
+
+		public Integer getRetryCount() {
+			return retryCount;
+		}
+
+		public void setRetryCount(Integer retryCount) {
+			this.retryCount = retryCount;
+		}
+
+		public Integer getRetryDelay() {
+			return retryDelay;
+		}
+
+		public void setRetryDelay(Integer retryDelay) {
+			this.retryDelay = retryDelay;
 		}
 
 		@Override

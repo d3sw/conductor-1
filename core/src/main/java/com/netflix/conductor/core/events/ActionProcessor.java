@@ -32,6 +32,7 @@ import com.netflix.conductor.core.execution.ParametersUtils;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.utils.TaskUtils;
 import com.netflix.conductor.service.MetadataService;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,11 +65,14 @@ public class ActionProcessor {
 
 	private Injector injector;
 
+	private RetryQueueManager retryQueue;
+
 	@Inject
-	public ActionProcessor(WorkflowExecutor executor, MetadataService metadata, Injector injector) {
+	public ActionProcessor(WorkflowExecutor executor, MetadataService metadata, Injector injector, RetryQueueManager retryQueue) {
 		this.executor = executor;
 		this.metadata = metadata;
 		this.injector = injector;
+		this.retryQueue = retryQueue;
 	}
 
 	public Map<String, Object> execute(Action action, String payload, String event, String messageId) throws Exception {
@@ -261,10 +266,12 @@ public class ActionProcessor {
 
 	private Map<String, Object> find_update(Action action, Object payload, String event, String messageId) throws Exception {
 		EventHandler.FindUpdate params = action.getFind_update();
+
+		List<String> strings = Collections.emptyList();
 		Map<String, Object> op = new HashMap<>();
 		try {
-			JavaEventAction javaEventAction = new FindUpdateAction(executor);
-			javaEventAction.handle(action, payload, event, messageId);
+			FindUpdateAction findUpdateAction = new FindUpdateAction(executor);
+			strings = findUpdateAction.handleInternal(action, payload, event, messageId);
 
 			op.put("conductor.event.name", event);
 			op.put("conductor.event.payload", payload);
@@ -277,6 +284,13 @@ public class ActionProcessor {
 			op.put("conductor.event.name", event);
 			op.put("conductor.event.payload", payload);
 			op.put("conductor.event.messageId", messageId);
+		} finally {
+			if (CollectionUtils.isEmpty(strings) &&
+					action.getRetryDelay() != null &&
+					action.getRetryCount() != null &&
+					action.getRetryCount() > 0) {
+				retryQueue.enqueue(action, payload, event, messageId);
+			}
 		}
 
 		return op;
