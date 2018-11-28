@@ -18,10 +18,6 @@
  */
 package com.netflix.conductor.server;
 
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.services.sqs.AmazonSQS;
-import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.netflix.conductor.contribs.AuthModule;
@@ -30,7 +26,6 @@ import com.netflix.conductor.contribs.json.JsonJqTransform;
 import com.netflix.conductor.contribs.validation.ValidationTask;
 import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.config.CoreModule;
-import com.netflix.conductor.core.events.RetryQueueFacade;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.IndexDAO;
 import com.netflix.conductor.dao.MetadataDAO;
@@ -95,20 +90,6 @@ public class ServerModule extends AbstractModule {
 		configureExecutorService();
 		bind(Configuration.class).toInstance(config);
 		bind(Registry.class).toInstance(registry);
-
-		boolean sqsEnableRetries = Boolean.parseBoolean(config.getProperty("event.processor.enable.retries", "false"));
-		if (sqsEnableRetries) {
-			String accessKey = config.getProperty("aws.access.key", null);
-			String secretKey = config.getProperty("aws.secret.key", null);
-
-			BasicAWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
-
-			AmazonSQS sqs = AmazonSQSClientBuilder.standard()
-					.withCredentials(new AWSStaticCredentialsProvider(awsCreds)).build();
-
-			bind(AmazonSQS.class).toInstance(sqs);
-			bind(RetryQueueFacade.class);
-		}
 
 		if (ConductorServer.DB.elasticsearch.equals(db)) {
 			install(new Elasticsearch6RestModule());
