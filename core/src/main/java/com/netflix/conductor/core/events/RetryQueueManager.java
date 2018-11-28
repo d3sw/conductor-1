@@ -79,7 +79,6 @@ public class RetryQueueManager {
 
     void enqueue(EventHandler.Action action, Object payload, String event, String eventId) throws Exception {
         if (!enabled) {
-            logger.warn("Retry queue manager is not enabled");
             return;
         }
         EventWrapper wrapper = new EventWrapper();
