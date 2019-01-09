@@ -187,7 +187,8 @@ public class SubWorkflow extends WorkflowSystemTask {
 			if (restartOn == null) { // Schedule restart
 				logger.debug("Scheduled restart for the sub-workflow " + subWorkflow.getWorkflowId());
 
-				// One second default delay if not specified
+				// Half second default delay if not specified
+				// See https://jira.d3nw.com/browse/ONECOND-794
 				Long restartDelay = param.getRestartDelay();
 				if (restartDelay == null) {
 					restartDelay = 500L;
