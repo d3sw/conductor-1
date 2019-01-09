@@ -262,6 +262,19 @@ public class Workflow extends Auditable{
 	public void setParentWorkflowId(String parentWorkflowId) {
 		this.parentWorkflowId = parentWorkflowId;
 	}
+
+	/**
+	 * @return whether this workflow is a sub-workflow.
+	 */
+	public boolean isSubWorkflow() {
+		String parentID = getParentWorkflowId();
+
+		if (parentID == null) {
+			return false;
+		} else {
+			return !parentID.isEmpty();
+		}
+	}
 	
 	/**
 	 * @return the parentWorkflowTaskId
