@@ -765,8 +765,9 @@ public class WorkflowExecutor {
 		// Send to atlas
 		Monitors.recordWorkflowTermination(workflow.getWorkflowType(), workflow.getStatus());
 
-		if (lazyDecider && workflow.getStatus() == WorkflowStatus.RESET && StringUtils.isNotEmpty(workflow.getParentWorkflowId())) {
-			wakeUpSweeper(workflow.getParentWorkflowId());
+		// ONECOND-794: https://jira.d3nw.com/browse/ONECOND-794
+		if (lazyDecider && workflow.getStatus() == WorkflowStatus.RESET && workflow.isSubWorkflow()) {
+			rewind(workflow.getWorkflowId(), workflow.getCorrelationId());
 		}
 	}
 
