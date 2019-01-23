@@ -132,6 +132,7 @@ public class InfoResource {
 		// Workflow and Event Counters
 		Map<String, String> counterMap = new HashMap<>();
 		Map<String, String> todayMap = new HashMap<>();
+		Map<String, Long> msgMap = new HashMap<>();
 
 		// Map counter names to metric names
 		counterMap.put("workflow_completion", "workflows_completed");
@@ -143,15 +144,20 @@ public class InfoResource {
 		todayMap.put("workflow_start", "workflows_started_today");
 
 		// Messages
-		counterMap.put("event_queue_messages_received", "messages_received");
-		counterMap.put("event_queue_messages_processed", "messages_processed");
+		msgMap.put("event_queue_messages_received", Long.valueOf(0));
+		msgMap.put("event_queue_messages_processed", Long.valueOf(0));
 
 		// Counters
 		final Map<String, Map<Map<String, String>, Counter>> counters = Monitors.getCounters();
 		final LocalDate today = LocalDate.now();
+
 		counters.forEach((name, map) -> {
 			if (counterMap.containsKey(name)) {
 				output.put(prefix + counterMap.get(name), sum(map));
+			}
+
+			if (msgMap.containsKey(name)) {
+				msgMap.put(name, Long.valueOf(sum(map)));
 			}
 
 			// Workflows Started or Completed Today
@@ -167,6 +173,12 @@ public class InfoResource {
 			}
 		});
 
+		// Message Processing
+		final long received = msgMap.get("event_queue_messages_received").longValue();
+		final long processed = msgMap.get("event_queue_messages_processed").longValue();
+		final long msgQueueSize = received - processed;
+
+		output.put(prefix + "messages_queued", msgQueueSize);
 
 		// Gauges to track in progress tasks, workflows, etc...
 		Map<String, String> gaugeMap = new HashMap<>();
