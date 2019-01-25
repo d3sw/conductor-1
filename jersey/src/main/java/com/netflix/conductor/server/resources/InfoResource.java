@@ -135,6 +135,7 @@ public class InfoResource {
 		// Counters
 		output.putAll(getCounters());
 		output.putAll(getTodayCounters());
+		output.putAll(getMessageCounters());
 
 		// Gauges to track in progress tasks, workflows, etc...
 		output.putAll(getGauges());
@@ -197,6 +198,32 @@ public class InfoResource {
 				output.putAll(getMainWorkflowTodayCounters("workflows_failed_today", map));
 			}
 		});
+
+		return output;
+	}
+
+	private Map<String, Object> getMessageCounters() {
+		Map<String, Object> output = new HashMap<>();
+
+		// Record message stats
+		Map<String, Long> msgMap = new HashMap<>();
+		msgMap.put("event_queue_messages_received", Long.valueOf(0));
+		msgMap.put("event_queue_messages_processed", Long.valueOf(0));
+
+		final Map<String, Map<Map<String, String>, Counter>> counters = Monitors.getCounters();
+
+		counters.forEach((name, map) -> {
+			if (msgMap.containsKey(name)) {
+				msgMap.put(name, Long.valueOf(sum(map)));
+			}
+		});
+
+		// Calculate the size of the message queue
+		final long received = msgMap.get("event_queue_messages_received").longValue();
+		final long processed = msgMap.get("event_queue_messages_processed").longValue();
+		final long msgQueueSize = received - processed;
+
+		output.put(prefix + "messages_queued", msgQueueSize);
 
 		return output;
 	}
