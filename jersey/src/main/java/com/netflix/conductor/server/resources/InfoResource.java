@@ -157,7 +157,7 @@ public class InfoResource {
 		counterMap.put("workflow_cancel", "workflows_canceled");
 		counterMap.put("workflow_restart", "workflows_restarted");
 
-		// Counters
+		// Calculate output
 		final Map<String, Map<Map<String, String>, Counter>> counters = Monitors.getCounters();
 		counters.forEach((name, map) -> {
 			if (counterMap.containsKey(name)) {
@@ -178,7 +178,7 @@ public class InfoResource {
 		todayMap.put("workflow_start", "workflows_started_today");
 		todayMap.put("workflow_cancel", "workflows_canceled_today");
 
-		// Counters
+		// Calculate output
 		final Map<String, Map<Map<String, String>, Counter>> counters = Monitors.getCounters();
 		counters.forEach((name, map) -> {
 			if (todayMap.containsKey(name)) {
