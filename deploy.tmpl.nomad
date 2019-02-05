@@ -17,6 +17,7 @@ job "conductor" {
   constraint {
     attribute = "${meta.env_type}"
     // Options: [ test | int | live ]
+    //
     value     = "<ENV_TYPE>"
   }
 
