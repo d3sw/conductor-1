@@ -48,6 +48,7 @@ import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.core.utils.QueueUtils;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.MetadataDAO;
+import com.netflix.conductor.dao.MetricsDAO;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.metrics.Monitors;
 import org.apache.commons.collections.CollectionUtils;
@@ -93,6 +94,7 @@ public class WorkflowExecutor {
 	public static final String sweeperQueue = "_sweeperQueue";
 
 	private int activeWorkerLastPollnSecs;
+	private MetricsDAO metricsDAO;
 
 	private boolean validateAuth;
 	private boolean authContextEnabled;
@@ -101,13 +103,15 @@ public class WorkflowExecutor {
 	private ParametersUtils pu = new ParametersUtils();
 
 	@Inject
-	public WorkflowExecutor(MetadataDAO metadata, ExecutionDAO edao, QueueDAO queue, ObjectMapper om, AuthManager auth, Configuration config) {
+	public WorkflowExecutor(MetadataDAO metadata, ExecutionDAO edao, QueueDAO queue, ObjectMapper om, AuthManager auth,
+							Configuration config, MetricsDAO metricsDAO) {
 		this.metadata = metadata;
 		this.edao = edao;
 		this.queue = queue;
 		this.config = config;
 		this.auth = auth;
 		activeWorkerLastPollnSecs = config.getIntProperty("tasks.active.worker.lastpoll", 10);
+		this.metricsDAO = metricsDAO;
 		this.decider = new DeciderService(metadata, om);
 		this.validateAuth = Boolean.parseBoolean(config.getProperty("workflow.auth.validate", "false"));
 		this.authContextEnabled = Boolean.parseBoolean(config.getProperty("workflow.authcontext.enabled", "false"));
@@ -230,6 +234,7 @@ public class WorkflowExecutor {
 
 			// metrics
 			Monitors.recordWorkflowStart(wf);
+			metricsDAO.recordWorkflowStart(wf);
 
 			// send wf start message
 			notifyWorkflowStatus(wf, StartEndState.start);

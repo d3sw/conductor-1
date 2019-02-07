@@ -1,0 +1,17 @@
+{
+  "counters": {
+    "properties": {
+      "container": {
+        "type": "keyword"
+      },
+      "name": {
+        "type": "keyword"
+      },
+      "tags": {
+        "type": "object",
+        "enabled": false,
+        "dynamic": false
+      }
+    }
+  }
+}
