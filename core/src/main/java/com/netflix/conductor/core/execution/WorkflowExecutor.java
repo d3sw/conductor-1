@@ -655,6 +655,8 @@ public class WorkflowExecutor {
 		if (!workflow.getStatus().isTerminal()) {
 			workflow.setStatus(WorkflowStatus.CANCELLED);
 		}
+
+		workflow.setCancelledBy("API");
 		return cancelWorkflow(workflow, reason);
 	}
 
@@ -695,11 +697,14 @@ public class WorkflowExecutor {
 			input.put("workflowType", workflow.getWorkflowType());
 			input.put("workflowVersion", workflow.getVersion());
 			input.put("contextUser", workflow.getContextUser());
+			input.put("cancelledBy", workflow.getCancelledBy());
+			input.put("correlationId", workflow.getCorrelationId());
+
 
 			try {
 
 				WorkflowDef latestCancelWorkflow = metadata.getLatest(cancelWorkflow);
-				String cancelWFId = startWorkflow(cancelWorkflow, latestCancelWorkflow.getVersion(), input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null);
+				String cancelWFId = startWorkflow(cancelWorkflow, latestCancelWorkflow.getVersion(), input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null, null, workflow.getWorkflowIds());
 
 				workflow.getOutput().put("conductor.cancel_workflow", cancelWFId);
 
@@ -798,6 +803,7 @@ public class WorkflowExecutor {
 				originalFailed = map;
 			}
 			workflow.getOutput().put("originalFailedTask", originalFailed);
+			workflow.setCancelledBy((String)failedTask.getOutputData().get("cancelledBy"));
 		}
 
 		edao.updateWorkflow(workflow);
@@ -825,6 +831,44 @@ public class WorkflowExecutor {
 			decide(parent.getWorkflowId());
 		}
 
+		// Handle task timeout
+		if (failedTask != null && Status.TIMED_OUT.equals(failedTask.getStatus())) {
+			WorkflowTask workflowTask = failedTask.getWorkflowTask();
+			if (workflowTask != null
+				&& workflowTask.getTimeOutWorkflow() != null
+				&& StringUtils.isNotEmpty(workflowTask.getTimeOutWorkflow().getName())) {
+				//
+				String workflowName = workflowTask.getTimeOutWorkflow().getName();
+				int workflowVersion;
+				if (workflowTask.getTimeOutWorkflow().getVersion() == null) {
+					WorkflowDef subFlowDef = metadata.getLatest(workflowName);
+					workflowVersion = subFlowDef.getVersion();
+				} else {
+					workflowVersion = (int) workflowTask.getTimeOutWorkflow().getVersion();
+				}
+
+				Map<String, Object> input = new HashMap<>();
+				input.put("workflowId", workflow.getWorkflowId());
+				input.put("workflowType", workflow.getWorkflowType());
+				input.put("correlationId", workflow.getCorrelationId());
+				input.put("workflowInput", workflow.getInput());
+				input.put("workflowVersion", workflow.getVersion());
+				input.put("contextUser", workflow.getContextUser());
+				input.put("taskId", failedTask.getTaskId());
+				input.put("taskInput", failedTask.getInputData());
+				input.put("taskRefName", failedTask.getReferenceTaskName());
+				input.put("taskRetryCount", failedTask.getRetryCount());
+
+				try {
+					startWorkflow(workflowName, workflowVersion, input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null, null, workflow.getWorkflowIds());
+				} catch (Exception e) {
+					logger.warn("Error workflow " + workflowName + " failed to start. reason: " + e.getMessage(), e);
+					Monitors.recordWorkflowStartError(workflowName);
+				}
+			}
+		}
+
+		// Start failure workflow
 		if (StringUtils.isNotEmpty(failureWorkflow)) {
 			// Backward compatible by default
 			boolean expandInline = Boolean.parseBoolean(config.getProperty("workflow.failure.expandInline", "true"));
@@ -838,6 +882,8 @@ public class WorkflowExecutor {
 			input.put("workflowType", workflow.getWorkflowType());
 			input.put("workflowVersion", workflow.getVersion());
 			input.put("contextUser", workflow.getContextUser());
+			input.put("cancelledBy", workflow.getCancelledBy());
+			input.put("correlationId", workflow.getCorrelationId());
 			input.put("reason", reason);
 			input.put("failureStatus", workflow.getStatus().toString());
 			if (failedTask != null) {
@@ -856,7 +902,7 @@ public class WorkflowExecutor {
 			try {
 
 				WorkflowDef latestFailureWorkflow = metadata.getLatest(failureWorkflow);
-				String failureWFId=startWorkflow(failureWorkflow, latestFailureWorkflow.getVersion(), input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null,null,workflow.getWorkflowIds());
+				String failureWFId=startWorkflow(failureWorkflow, latestFailureWorkflow.getVersion(), input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null,null, workflow.getWorkflowIds());
 				workflow.getOutput().put("conductor.failure_workflow", failureWFId);
 
 			} catch (Exception e) {
@@ -1088,19 +1134,6 @@ public class WorkflowExecutor {
 				edao.updateTasks(tasksToBeUpdated);
 				edao.updateWorkflow(workflow);
 				queue.push(deciderQueue, workflow.getWorkflowId(), config.getSweepFrequency());
-			}
-
-			if (outcome.startWorkflow != null) {
-				DeciderService.StartWorkflowParams startWorkflow = outcome.startWorkflow;
-				String workflowName = startWorkflow.name;
-				int workflowVersion;
-				if (startWorkflow.version == null) {
-					WorkflowDef subFlowDef = metadata.getLatest(workflowName);
-					workflowVersion = subFlowDef.getVersion();
-				} else {
-					workflowVersion = startWorkflow.version;
-				}
-				startWorkflow(workflowName, workflowVersion, startWorkflow.params, null, workflow.getWorkflowId(), null,null);
 			}
 
 			if(stateChanged) {
