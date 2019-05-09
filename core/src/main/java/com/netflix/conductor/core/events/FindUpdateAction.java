@@ -1,5 +1,6 @@
 package com.netflix.conductor.core.events;
 
+import com.netflix.conductor.common.metadata.events.EventExecution;
 import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
@@ -10,6 +11,7 @@ import com.netflix.conductor.core.utils.TaskUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.NDC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,11 +26,11 @@ public class FindUpdateAction implements JavaEventAction {
 	}
 
 	@Override
-	public List<String> handle(EventHandler.Action action, Object payload, String event, String messageId) throws Exception {
-		return handleInternal(action, payload, event, messageId);
+	public List<?> handle(EventHandler.Action action, Object payload, EventExecution ee) throws Exception {
+		return handleInternal(action, payload, ee.getEvent(), ee.getMessageId(), ee.getTags());
 	}
 
-	public List<String> handleInternal(EventHandler.Action action, Object payload, String event, String messageId) throws Exception {
+	public List<String> handleInternal(EventHandler.Action action, Object payload, String event, String messageId, Set<String> tags) throws Exception {
 		Set<String> output = new HashSet<>();
 		EventHandler.FindUpdate findUpdate = action.getFind_update();
 
@@ -57,11 +59,28 @@ public class FindUpdateAction implements JavaEventAction {
 			taskStatus = Task.Status.COMPLETED;
 		}
 
-		// Lets find WAIT + IN_PROGRESS tasks directly via edao
+		// Get the current logging context (owner)
+		String ndcValue = NDC.peek();
+
+		// Get the tasks either by
+		// a) tags -> workflows -> WAIT + IN_PROGRESS task
+		// b) backward compatible for all 'WAIT + IN_PROGRESS'
+		List<Task> tasks;
+		if (CollectionUtils.isNotEmpty(tags)) {
+			tasks = executor.getPendingTasksByTags(Wait.NAME, tags);
+		} else {
+			tasks = executor.getPendingSystemTasks(Wait.NAME);
+		}
+
 		boolean taskNamesDefined = CollectionUtils.isNotEmpty(findUpdate.getTaskRefNames());
-		List<Task> tasks = executor.getPendingSystemTasks(Wait.NAME);
 		tasks.parallelStream().forEach(task -> {
+			boolean ndcCleanup = false;
 			try {
+				if (StringUtils.isEmpty(NDC.peek())) {
+					ndcCleanup = true;
+					NDC.push(ndcValue);
+				}
+
 				Workflow workflow = executor.getWorkflow(task.getWorkflowInstanceId(), false);
 				if (workflow == null) {
 					logger.debug("No workflow found with id " + task.getWorkflowInstanceId() + ", skipping " + task);
@@ -110,6 +129,10 @@ public class FindUpdateAction implements JavaEventAction {
 			} catch (Exception ex) {
 				logger.error("Find update failed for taskId={}, messageId={}, event={}, workflowId={}, correlationId={}, payload={}",
 					task.getTaskId(), messageId, event, task.getWorkflowInstanceId(), task.getCorrelationId(), payload, ex);
+			} finally {
+				if (ndcCleanup) {
+					NDC.remove();
+				}
 			}
 		});
 
