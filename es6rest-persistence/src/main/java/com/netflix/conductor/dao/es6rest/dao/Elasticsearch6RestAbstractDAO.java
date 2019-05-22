@@ -66,11 +66,11 @@ abstract class Elasticsearch6RestAbstractDAO {
     }
 
     static boolean isVerConflictException(Exception ex) {
-        return ex.getMessage().contains("version_conflict_engine_exception");
+        return ex != null && StringUtils.isNotEmpty(ex.getMessage()) && ex.getMessage().contains("version_conflict_engine_exception");
     }
 
     static boolean isDocMissingException(Exception ex) {
-        return ex.getMessage().contains("document_missing_exception");
+        return ex != null && StringUtils.isNotEmpty(ex.getMessage()) && ex.getMessage().contains("document_missing_exception");
     }
 
     static boolean isConflictOrMissingException(Exception ex) {
