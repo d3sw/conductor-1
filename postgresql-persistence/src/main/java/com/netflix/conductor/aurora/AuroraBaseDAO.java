@@ -43,11 +43,9 @@ public abstract class AuroraBaseDAO {
 		Instant start = Instant.now();
 		LazyToString callingMethod = getCallingMethod();
 		if (logger.isTraceEnabled())
-			logger.trace("{} : starting transaction", callingMethod);
+			logger.trace("{} : starting transaction", callingMethod.toString());
 
 		try (Connection tx = dataSource.getConnection()) {
-			boolean previousAutoCommitMode = tx.getAutoCommit();
-			tx.setAutoCommit(false);
 			try {
 				R result = function.apply(tx);
 				tx.commit();
@@ -55,14 +53,12 @@ public abstract class AuroraBaseDAO {
 			} catch (Throwable th) {
 				tx.rollback();
 				throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, th.getMessage(), th);
-			} finally {
-				tx.setAutoCommit(previousAutoCommitMode);
 			}
 		} catch (SQLException ex) {
 			throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR, ex.getMessage(), ex);
 		} finally {
 			if (logger.isTraceEnabled())
-				logger.trace("{} : took {}ms", callingMethod, Duration.between(start, Instant.now()).toMillis());
+				logger.trace("{} : took {}ms", callingMethod.toString(), Duration.between(start, Instant.now()).toMillis());
 		}
 	}
 
@@ -71,7 +67,7 @@ public abstract class AuroraBaseDAO {
 			.filter(ste -> !EXCLUDED_STACKTRACE_CLASS.contains(ste.getClassName()))
 			.findFirst()
 			.map(StackTraceElement::getMethodName)
-			.orElseThrow(() -> new NullPointerException("Cannot find Caller")));
+			.orElse("Cannot find Caller"));
 	}
 
 	public <R> R query(Connection tx, String query, QueryFunction<R> function) {
