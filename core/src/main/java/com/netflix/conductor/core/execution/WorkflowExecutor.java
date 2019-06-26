@@ -444,12 +444,7 @@ public class WorkflowExecutor {
 		// send wf start message
 		notifyWorkflowStatus(workflow, StartEndState.start);
 
-		// Who calls decider ? Sweeper or current thread?
-		if (lazyDecider) {
-			wakeUpSweeper(workflowId);
-		} else {
-			decide(workflowId);
-		}
+		decide(workflowId);
 		logger.debug("Workflow rewind. Current status=" + workflow.getStatus() + ",workflowId=" + workflow.getWorkflowId()+",correlationId=" + workflow.getCorrelationId() + ",contextUser=" + workflow.getContextUser());
 	}
 
@@ -838,6 +833,7 @@ public class WorkflowExecutor {
 		List<Task> tasks = workflow.getTasks();
 		cancelTasks(workflow, tasks, null);
 
+		logger.debug("Removing decider record for " + workflow.getWorkflowId());
 		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 
 		// If the following lines, for some reason fails, the sweep will take
@@ -1063,6 +1059,8 @@ public class WorkflowExecutor {
 	private void wakeUpSweeper(String workflowId) {
 		boolean active = queue.exists(WorkflowExecutor.sweeperQueue, workflowId);
 		if (active) {
+			logger.debug("wakeUpSweeper. Sweeper in progress for " + workflowId);
+
 			// Wait a little bit. If the current sweeper call is empty
 			// then it will exit soon and we can wake it up again
 			Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
@@ -1072,13 +1070,14 @@ public class WorkflowExecutor {
 
 			// Exit if it still active
 			if (active) {
+				logger.debug("wakeUpSweeper. Sweeper still in progress for " + workflowId);
 				return;
 			}
 		}
 
 		// Otherwise wake it up by unacking message via queue
 		boolean result = queue.wakeup(WorkflowExecutor.deciderQueue, workflowId);
-		logger.debug("wakeup " + result + " for " + workflowId);
+		logger.debug("wakeUpSweeper " + result + " for " + workflowId);
 	}
 
 	public List<Task> getTasks(String taskType, String startKey, int count) throws Exception {
