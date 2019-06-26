@@ -838,6 +838,8 @@ public class WorkflowExecutor {
 		List<Task> tasks = workflow.getTasks();
 		cancelTasks(workflow, tasks, null);
 
+		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
+
 		// If the following lines, for some reason fails, the sweep will take
 		// care of this again!
 		if (workflow.getParentWorkflowId() != null) {
@@ -929,8 +931,6 @@ public class WorkflowExecutor {
 				Monitors.recordWorkflowStartError(failureWorkflow);
 			}
 		}
-
-		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 
 		// send wf end message
 		notifyWorkflowStatus(workflow, StartEndState.end);
