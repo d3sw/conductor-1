@@ -17,6 +17,8 @@ message Workflow {
         TIMED_OUT = 3;
         TERMINATED = 4;
         PAUSED = 5;
+        CANCELLED = 6;
+        RESET = 7;
     }
     Workflow.WorkflowStatus status = 1;
     int64 end_time = 2;
@@ -38,4 +40,12 @@ message Workflow {
     WorkflowDef workflow_definition = 19;
     string external_input_payload_storage_path = 20;
     string external_output_payload_storage_path = 21;
+    repeated string workflow_ids = 22;
+    map<string, google.protobuf.Value> authorization = 23;
+    string context_token = 24;
+    string context_user = 25;
+    repeated string tags = 26;
+    int32 restart_count = 27;
+    int32 rerun_count = 28;
+    string cancelled_by = 29;
 }

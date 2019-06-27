@@ -18,16 +18,15 @@
  */
 package com.netflix.conductor.common.metadata.events;
 
+import com.github.vmg.protogen.annotations.ProtoEnum;
+import com.github.vmg.protogen.annotations.ProtoField;
+import com.github.vmg.protogen.annotations.ProtoMessage;
 import com.google.protobuf.Any;
-import com.github.vmg.protogen.annotations.*;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Viren
@@ -54,6 +53,15 @@ public class EventHandler {
 
 	@ProtoField(id = 5)
 	private boolean active;
+
+	@ProtoField(id = 6)
+	private String conditionClass;
+
+	@ProtoField(id = 7)
+	private String tags;
+
+	@ProtoField(id = 8)
+	private boolean retryEnabled;
 
 	public EventHandler() {
 
@@ -134,13 +142,60 @@ public class EventHandler {
 		this.active = active;
 	}
 
+	/**
+	 *
+	 * @return The condition java class
+	 */
+	public String getConditionClass() {
+		return conditionClass;
+	}
+
+	/**
+	 *
+	 * @param conditionClass The condition java class
+	 */
+	public void setConditionClass(String conditionClass) {
+		this.conditionClass = conditionClass;
+	}
+
+	/**
+	 *
+	 * @return The tags JQ expression
+	 */
+	public String getTags() {
+		return tags;
+	}
+
+	/**
+	 *
+	 * @param tags The tags JQ expression
+	 */
+	public void setTags(String tags) {
+		this.tags = tags;
+	}
+
+	/**
+	 *
+	 * @return AMQ retry enabled
+	 */
+	public boolean isRetryEnabled() {
+		return retryEnabled;
+	}
+
+	/**
+	 *
+	 * @param retryEnabled AMQ retry enabled
+	 */
+	public void setRetryEnabled(boolean retryEnabled) {
+		this.retryEnabled = retryEnabled;
+	}
 
 	@ProtoMessage
 	public static class Action {
 
 		@ProtoEnum
 		public enum Type {
-			start_workflow, complete_task, fail_task
+			start_workflow, complete_task, fail_task, update_task, find_update, java_action
 		}
 
 		@ProtoField(id = 1)
@@ -157,6 +212,21 @@ public class EventHandler {
 
 		@ProtoField(id = 5)
 		private boolean expandInlineJSON;
+
+		@ProtoField(id = 6)
+		private String condition;
+
+		@ProtoField(id = 7)
+		private String conditionClass;
+
+		@ProtoField(id = 8)
+		private UpdateTask update_task;
+
+		@ProtoField(id = 9)
+		private FindUpdate find_update;
+
+		@ProtoField(id = 10)
+		private JavaAction java_action;
 
 		/**
 		 * @return the action
@@ -232,6 +302,101 @@ public class EventHandler {
 		 */
 		public boolean isExpandInlineJSON() {
 			return expandInlineJSON;
+		}
+
+		/**
+		 *
+		 * @return The condition expression
+		 */
+		public String getCondition() {
+			return condition;
+		}
+
+		/**
+		 *
+		 * @param condition The condition expression
+		 */
+		public void setCondition(String condition) {
+			this.condition = condition;
+		}
+
+		/**
+		 *
+		 * @return The condition class
+		 */
+		public String getConditionClass() {
+			return conditionClass;
+		}
+
+		/**
+		 *
+		 * @param conditionClass The condition class
+		 */
+		public void setConditionClass(String conditionClass) {
+			this.conditionClass = conditionClass;
+		}
+
+		/**
+		 *
+		 * @return Update task params
+		 */
+		public UpdateTask getUpdate_task() {
+			return update_task;
+		}
+
+		/**
+		 *
+		 * @param update_task Update task params
+		 */
+		public void setUpdate_task(UpdateTask update_task) {
+			this.update_task = update_task;
+		}
+
+		/**
+		 *
+		 * @return Find update params
+		 */
+		public FindUpdate getFind_update() {
+			return find_update;
+		}
+
+		/**
+		 *
+		 * @param find_update Find update params
+		 */
+		public void setFind_update(FindUpdate find_update) {
+			this.find_update = find_update;
+		}
+
+		/**
+		 *
+		 * @return Java action params
+		 */
+		public JavaAction getJava_action() {
+			return java_action;
+		}
+
+		/**
+		 *
+		 * @param java_action Java action params
+		 */
+		public void setJava_action(JavaAction java_action) {
+			this.java_action = java_action;
+		}
+
+		@Override
+		public String toString() {
+			return "{action=" + action +
+				", start_workflow=" + start_workflow +
+				", complete_task=" + complete_task +
+				", fail_task=" + fail_task +
+				", expandInlineJSON=" + expandInlineJSON +
+				", condition='" + condition + '\'' +
+				", conditionClass='" + conditionClass + '\'' +
+				", update_task=" + update_task +
+				", find_update=" + find_update +
+				", java_action=" + java_action +
+				'}';
 		}
 	}
 
@@ -318,6 +483,17 @@ public class EventHandler {
 		 */
 		public void setTaskId(String taskId) {
 			this.taskId = taskId;
+		}
+
+		@Override
+		public String toString() {
+			return "TaskDetails{" +
+				"workflowId='" + workflowId + '\'' +
+				", taskRefName='" + taskRefName + '\'' +
+				", output=" + output +
+				", outputMessage=" + outputMessage +
+				", taskId='" + taskId + '\'' +
+				'}';
 		}
 	}
 
@@ -418,6 +594,364 @@ public class EventHandler {
 		public void setTaskToDomain(Map<String, String> taskToDomain) {
 			this.taskToDomain = taskToDomain;
 		}
+
+		@Override
+		public String toString() {
+			return "StartWorkflow{" +
+				"name='" + name + '\'' +
+				", version=" + version +
+				", correlationId='" + correlationId + '\'' +
+				", input=" + input +
+				", inputMessage=" + inputMessage +
+				", taskToDomain=" + taskToDomain +
+				'}';
+		}
 	}
 
+	@ProtoMessage
+	public static class UpdateTask {
+		@ProtoField(id = 1)
+		private String workflowId;
+
+		@ProtoField(id = 2)
+		private String taskId;
+
+		@ProtoField(id = 3)
+		private String taskRef;
+
+		@ProtoField(id = 4)
+		private String status;
+
+		@ProtoField(id = 5)
+		private String failedReason;
+
+		@ProtoField(id = 6)
+		private boolean resetStartTime;
+
+		@ProtoField(id = 7)
+		private Map<String, String> statuses = new HashMap<>();
+
+		@ProtoField(id = 8)
+		private Map<String, Object> output = new HashMap<>();
+
+		/**
+		 *
+		 * @return The workflowId JQ expression
+		 */
+		public String getWorkflowId() {
+			return workflowId;
+		}
+
+		/**
+		 *
+		 * @param workflowId The workflowId JQ expression
+		 */
+		public void setWorkflowId(String workflowId) {
+			this.workflowId = workflowId;
+		}
+
+		/**
+		 *
+		 * @return The taskId JQ expression
+		 */
+		public String getTaskId() {
+			return taskId;
+		}
+
+		/**
+		 *
+		 * @param taskId The taskId JQ expression
+		 */
+		public void setTaskId(String taskId) {
+			this.taskId = taskId;
+		}
+
+		/**
+		 *
+		 * @return The taskRef JQ expression
+		 */
+		public String getTaskRef() {
+			return taskRef;
+		}
+
+		/**
+		 *
+		 * @param taskRef The taskRef JQ expression
+		 */
+		public void setTaskRef(String taskRef) {
+			this.taskRef = taskRef;
+		}
+
+		/**
+		 *
+		 * @return The status JQ expression
+		 */
+		public String getStatus() {
+			return status;
+		}
+
+		/**
+		 *
+		 * @param status The status JQ expression
+		 */
+		public void setStatus(String status) {
+			this.status = status;
+		}
+
+		/**
+		 *
+		 * @return The failedReason JQ expression
+		 */
+		public String getFailedReason() {
+			return failedReason;
+		}
+
+		/**
+		 *
+		 * @param failedReason The failedReason JQ expression
+		 */
+		public void setFailedReason(String failedReason) {
+			this.failedReason = failedReason;
+		}
+
+		/**
+		 *
+		 * @return Reset start time for in progress tasks
+		 */
+		public boolean isResetStartTime() {
+			return resetStartTime;
+		}
+
+		/**
+		 *
+		 * @param resetStartTime Reset start time for in progress tasks
+		 */
+		public void setResetStartTime(boolean resetStartTime) {
+			this.resetStartTime = resetStartTime;
+		}
+
+		/**
+		 *
+		 * @return Statuses mapping
+		 */
+		public Map<String, String> getStatuses() {
+			return statuses;
+		}
+
+		/**
+		 *
+		 * @param statuses Statuses mapping
+		 */
+		public void setStatuses(Map<String, String> statuses) {
+			this.statuses = statuses;
+		}
+
+		/**
+		 *
+		 * @return The output payload
+		 */
+		public Map<String, Object> getOutput() {
+			return output;
+		}
+
+		/**
+		 *
+		 * @param output The output payload
+		 */
+		public void setOutput(Map<String, Object> output) {
+			this.output = output;
+		}
+
+		@Override
+		public String toString() {
+			return "UpdateTask{" +
+				"workflowId='" + workflowId + '\'' +
+				", taskId='" + taskId + '\'' +
+				", taskRef='" + taskRef + '\'' +
+				", status='" + status + '\'' +
+				", resetStartTime=" + resetStartTime +
+				", failedReason='" + failedReason + '\'' +
+				", statuses=" + statuses +
+				", output=" + output +
+				'}';
+		}
+	}
+
+	@ProtoMessage
+	public static class FindUpdate {
+		@ProtoField(id = 1)
+		private String status;
+
+		@ProtoField(id = 2)
+		private String failedReason;
+
+		@ProtoField(id = 3)
+		private String expression;
+
+		@ProtoField(id = 4)
+		private Set<String> taskRefNames = new HashSet<>();
+
+		@ProtoField(id = 5)
+		private Map<String, String> statuses = new HashMap<>();
+
+		@ProtoField(id = 6)
+		private Map<String, String> inputParameters = new HashMap<>();
+
+		/**
+		 *
+		 * @return The status JQ expression
+		 */
+		public String getStatus() {
+			return status;
+		}
+
+		/**
+		 *
+		 * @param status The status JQ expression
+		 */
+		public void setStatus(String status) {
+			this.status = status;
+		}
+
+		/**
+		 *
+		 * @return The failedReason JQ expression
+		 */
+		public String getFailedReason() {
+			return failedReason;
+		}
+
+		/**
+		 *
+		 * @param failedReason The failedReason JQ expression
+		 */
+		public void setFailedReason(String failedReason) {
+			this.failedReason = failedReason;
+		}
+
+		/**
+		 *
+		 * @return The JQ expression to match entries
+		 */
+		public String getExpression() {
+			return expression;
+		}
+
+		/**
+		 *
+		 * @param expression The JQ expression to match entries
+		 */
+		public void setExpression(String expression) {
+			this.expression = expression;
+		}
+
+		/**
+		 *
+		 * @return taskRefNames filter
+		 */
+		public Set<String> getTaskRefNames() {
+			return taskRefNames;
+		}
+
+		/**
+		 *
+		 * @param taskRefNames taskRefNames filter
+		 */
+		public void setTaskRefNames(Set<String> taskRefNames) {
+			this.taskRefNames = taskRefNames;
+		}
+
+		/**
+		 *
+		 * @return The statuses mapping
+		 */
+		public Map<String, String> getStatuses() {
+			return statuses;
+		}
+
+		/**
+		 *
+		 * @param statuses The statuses mapping
+		 */
+		public void setStatuses(Map<String, String> statuses) {
+			this.statuses = statuses;
+		}
+
+		/**
+		 *
+		 * @return The inputParameters mapping
+		 */
+		public Map<String, String> getInputParameters() {
+			return inputParameters;
+		}
+
+		/**
+		 *
+		 * @param inputParameters The inputParameters mapping
+		 */
+		public void setInputParameters(Map<String, String> inputParameters) {
+			this.inputParameters = inputParameters;
+		}
+
+		@Override
+		public String toString() {
+			return "FindUpdate{" +
+				"taskRefNames=" + taskRefNames +
+				", status='" + status + '\'' +
+				", statuses=" + statuses +
+				", expression='" + expression + '\'' +
+				", failedReason='" + failedReason + '\'' +
+				", inputParameters='" + inputParameters + '\'' +
+				'}';
+		}
+	}
+
+	@ProtoMessage
+	public static class JavaAction {
+		@ProtoField(id = 1)
+		private String className;
+
+		@ProtoField(id = 2)
+		private Map<String, Object> inputParameters;
+
+		/**
+		 *
+		 * @return The java class name
+		 */
+		public String getClassName() {
+			return className;
+		}
+
+		/**
+		 *
+		 * @param className The java class name
+		 */
+		public void setClassName(String className) {
+			this.className = className;
+		}
+
+		/**
+		 *
+		 * @return The inputParameters mapping for the class
+		 */
+		public Map<String, Object> getInputParameters() {
+			return inputParameters;
+		}
+
+		/**
+		 *
+		 * @param inputParameters The inputParameters mapping for the class
+		 */
+		public void setInputParameters(Map<String, Object> inputParameters) {
+			this.inputParameters = inputParameters;
+		}
+
+		@Override
+		public String toString() {
+			return "JavaAction{" +
+				"className='" + className + '\'' +
+				", inputParameters=" + inputParameters +
+				'}';
+		}
+	}
 }

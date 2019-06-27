@@ -1,0 +1,15 @@
+syntax = "proto3";
+package conductor.proto;
+
+import "google/protobuf/struct.proto";
+
+option java_package = "com.netflix.conductor.proto";
+option java_outer_classname = "RerunWorkflowParamsPb";
+option go_package = "github.com/netflix/conductor/client/gogrpc/conductor/model";
+
+message RerunWorkflowParams {
+    string name = 1;
+    google.protobuf.Value version = 2;
+    map<string, google.protobuf.Value> input = 3;
+    map<string, string> conditions = 4;
+}

@@ -34,9 +34,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @ProtoMessage
 public class TaskResult {
 
+    //TODO Replace FAILED_NO_RETRY with FAILED_WITH_TERMINAL_ERROR
     @ProtoEnum
     public enum Status {
-        IN_PROGRESS, FAILED, FAILED_WITH_TERMINAL_ERROR, COMPLETED
+        IN_PROGRESS, FAILED, FAILED_WITH_TERMINAL_ERROR, COMPLETED, RESET, FAILED_NO_RETRY
     }
 
     @NotEmpty(message = "Workflow Id cannot be null or empty")
@@ -65,6 +66,12 @@ public class TaskResult {
     @ProtoField(id = 8)
     private Any outputMessage;
 
+    @ProtoField(id = 9)
+    private Map<String, Object> inputData = new HashMap<>();
+
+    @ProtoField(id = 10)
+    private boolean resetStartTime;
+
     private List<TaskExecLog> logs = new CopyOnWriteArrayList<>();
 
     private String externalOutputPayloadStoragePath;
@@ -88,10 +95,17 @@ public class TaskResult {
             case READY_FOR_RERUN:
                 this.status = Status.IN_PROGRESS;
                 break;
+            case FAILED_NO_RETRY:
+                this.status = Status.FAILED_NO_RETRY;
+                break;
+            case RESET:
+                this.status = Status.RESET;
+                break;
             default:
                 this.status = Status.valueOf(task.getStatus().name());
                 break;
         }
+        this.inputData = task.getInputData();
     }
 
     public TaskResult() {
@@ -239,6 +253,22 @@ public class TaskResult {
      */
     public void setExternalOutputPayloadStoragePath(String externalOutputPayloadStoragePath) {
         this.externalOutputPayloadStoragePath = externalOutputPayloadStoragePath;
+    }
+
+    public Map<String, Object> getInputData() {
+        return inputData;
+    }
+
+    public void setInputData(Map<String, Object> inputData) {
+        this.inputData = inputData;
+    }
+
+    public boolean isResetStartTime() {
+        return resetStartTime;
+    }
+
+    public void setResetStartTime(boolean resetStartTime) {
+        this.resetStartTime = resetStartTime;
     }
 
     @Override

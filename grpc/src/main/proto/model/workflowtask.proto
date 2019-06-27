@@ -36,4 +36,7 @@ message WorkflowTask {
     bool rate_limited = 20;
     repeated string default_exclusive_join_task = 21;
     bool async_complete = 23;
+    map<string, google.protobuf.Value> event_messages = 24;
+    map<string, google.protobuf.Value> defaults = 25;
+    SubWorkflowParams time_out_workflow = 26;
 }

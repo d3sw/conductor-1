@@ -14,6 +14,8 @@ message TaskResult {
         FAILED = 1;
         FAILED_WITH_TERMINAL_ERROR = 2;
         COMPLETED = 3;
+        RESET = 4;
+        FAILED_NO_RETRY = 5;
     }
     string workflow_instance_id = 1;
     string task_id = 2;
@@ -23,4 +25,6 @@ message TaskResult {
     TaskResult.Status status = 6;
     map<string, google.protobuf.Value> output_data = 7;
     google.protobuf.Any output_message = 8;
+    map<string, google.protobuf.Value> input_data = 9;
+    bool reset_start_time = 10;
 }

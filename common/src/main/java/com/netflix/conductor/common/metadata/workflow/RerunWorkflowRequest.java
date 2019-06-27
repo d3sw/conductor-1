@@ -37,6 +37,12 @@ public class RerunWorkflowRequest {
     @ProtoField(id = 5)
 	private String correlationId;
 
+	@ProtoField(id = 6)
+	private Map<String, Object> taskOutput;
+
+	@ProtoField(id = 7)
+	private Boolean resumeParents;
+
 	public String getReRunFromWorkflowId() {
 		return reRunFromWorkflowId;
 	}
@@ -75,5 +81,21 @@ public class RerunWorkflowRequest {
 
 	public void setCorrelationId(String correlationId) {
 		this.correlationId = correlationId;
+	}
+
+	public Map<String, Object> getTaskOutput() {
+		return taskOutput;
+	}
+
+	public void setTaskOutput(Map<String, Object> taskOutput) {
+		this.taskOutput = taskOutput;
+	}
+
+	public Boolean isResumeParents() {
+		return resumeParents;
+	}
+
+	public void setResumeParents(Boolean resumeParents) {
+		this.resumeParents = resumeParents;
 	}
 }

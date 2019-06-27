@@ -18,12 +18,12 @@
  */
 package com.netflix.conductor.common.metadata.events;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-
-import com.github.vmg.protogen.annotations.*;
+import com.github.vmg.protogen.annotations.ProtoEnum;
+import com.github.vmg.protogen.annotations.ProtoField;
+import com.github.vmg.protogen.annotations.ProtoMessage;
 import com.netflix.conductor.common.metadata.events.EventHandler.Action;
+
+import java.util.*;
 
 /**
  * @author Viren
@@ -60,6 +60,24 @@ public class EventExecution {
 
 	@ProtoField(id = 8)
 	private Map<String, Object> output = new HashMap<>();
+
+	@ProtoField(id = 9)
+	private String subject;
+
+	@ProtoField(id = 10)
+	private long received;
+
+	@ProtoField(id = 11)
+	private long processed;
+
+	@ProtoField(id = 12)
+	private long started;
+
+	@ProtoField(id = 13)
+	private long accepted;
+
+	@ProtoField(id = 14)
+	private Set<String> tags = new HashSet<>();
 
 	public EventExecution() {
 
@@ -189,6 +207,102 @@ public class EventExecution {
 	 */
 	public void setOutput(Map<String, Object> output) {
 		this.output = output;
+	}
+
+	/**
+	 *
+	 * @return the event subject
+	 */
+	public String getSubject() {
+		return subject;
+	}
+
+	/**
+	 *
+	 * @param subject the event subject
+	 */
+	public void setSubject(String subject) {
+		this.subject = subject;
+	}
+
+	/**
+	 *
+	 * @return the execution received time
+	 */
+	public long getReceived() {
+		return received;
+	}
+
+	/**
+	 *
+	 * @param received the execution received time
+	 */
+	public void setReceived(long received) {
+		this.received = received;
+	}
+
+	/**
+	 *
+	 * @return the execution processed time
+	 */
+	public long getProcessed() {
+		return processed;
+	}
+
+	/**
+	 *
+	 * @param processed the execution processed time
+	 */
+	public void setProcessed(long processed) {
+		this.processed = processed;
+	}
+
+	/**
+	 *
+	 * @return the execution started time
+	 */
+	public long getStarted() {
+		return started;
+	}
+
+	/**
+	 *
+	 * @param started the execution started time
+	 */
+	public void setStarted(long started) {
+		this.started = started;
+	}
+
+	/**
+	 *
+	 * @return the event accepted time
+	 */
+	public long getAccepted() {
+		return accepted;
+	}
+
+	/**
+	 *
+	 * @param accepted the event accepted time
+	 */
+	public void setAccepted(long accepted) {
+		this.accepted = accepted;
+	}
+
+	/**
+	 *
+	 * @return the execution tags associated with
+	 */
+	public Set<String> getTags() {
+		return tags;
+	}
+
+	/**
+	 *
+	 * @param tags the execution tags associated with
+	 */
+	public void setTags(Set<String> tags) {
+		this.tags = tags;
 	}
 
 	@Override

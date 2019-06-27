@@ -4,6 +4,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.Value;
 import com.netflix.conductor.common.metadata.events.EventExecution;
 import com.netflix.conductor.common.metadata.events.EventHandler;
+import com.netflix.conductor.common.metadata.events.EventPublished;
 import com.netflix.conductor.common.metadata.tasks.PollData;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.TaskDef;
@@ -11,6 +12,7 @@ import com.netflix.conductor.common.metadata.tasks.TaskExecLog;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
 import com.netflix.conductor.common.metadata.workflow.DynamicForkJoinTask;
 import com.netflix.conductor.common.metadata.workflow.DynamicForkJoinTaskList;
+import com.netflix.conductor.common.metadata.workflow.RerunWorkflowParams;
 import com.netflix.conductor.common.metadata.workflow.RerunWorkflowRequest;
 import com.netflix.conductor.common.metadata.workflow.SkipTaskRequest;
 import com.netflix.conductor.common.metadata.workflow.StartWorkflowRequest;
@@ -24,7 +26,9 @@ import com.netflix.conductor.proto.DynamicForkJoinTaskListPb;
 import com.netflix.conductor.proto.DynamicForkJoinTaskPb;
 import com.netflix.conductor.proto.EventExecutionPb;
 import com.netflix.conductor.proto.EventHandlerPb;
+import com.netflix.conductor.proto.EventPublishedPb;
 import com.netflix.conductor.proto.PollDataPb;
+import com.netflix.conductor.proto.RerunWorkflowParamsPb;
 import com.netflix.conductor.proto.RerunWorkflowRequestPb;
 import com.netflix.conductor.proto.SkipTaskRequestPb;
 import com.netflix.conductor.proto.StartWorkflowRequestPb;
@@ -124,6 +128,14 @@ public abstract class AbstractProtoMapper {
         for (Map.Entry<String, Object> pair : from.getOutput().entrySet()) {
             to.putOutput( pair.getKey(), toProto( pair.getValue() ) );
         }
+        if (from.getSubject() != null) {
+            to.setSubject( from.getSubject() );
+        }
+        to.setReceived( from.getReceived() );
+        to.setProcessed( from.getProcessed() );
+        to.setStarted( from.getStarted() );
+        to.setAccepted( from.getAccepted() );
+        to.addAllTags( from.getTags() );
         return to.build();
     }
 
@@ -141,6 +153,12 @@ public abstract class AbstractProtoMapper {
             outputMap.put( pair.getKey(), fromProto( pair.getValue() ) );
         }
         to.setOutput(outputMap);
+        to.setSubject( from.getSubject() );
+        to.setReceived( from.getReceived() );
+        to.setProcessed( from.getProcessed() );
+        to.setStarted( from.getStarted() );
+        to.setAccepted( from.getAccepted() );
+        to.setTags( from.getTagsList().stream().collect(Collectors.toCollection(HashSet::new)) );
         return to;
     }
 
@@ -183,6 +201,13 @@ public abstract class AbstractProtoMapper {
             to.addActions( toProto(elem) );
         }
         to.setActive( from.isActive() );
+        if (from.getConditionClass() != null) {
+            to.setConditionClass( from.getConditionClass() );
+        }
+        if (from.getTags() != null) {
+            to.setTags( from.getTags() );
+        }
+        to.setRetryEnabled( from.isRetryEnabled() );
         return to.build();
     }
 
@@ -193,6 +218,101 @@ public abstract class AbstractProtoMapper {
         to.setCondition( from.getCondition() );
         to.setActions( from.getActionsList().stream().map(this::fromProto).collect(Collectors.toCollection(ArrayList::new)) );
         to.setActive( from.getActive() );
+        to.setConditionClass( from.getConditionClass() );
+        to.setTags( from.getTags() );
+        to.setRetryEnabled( from.getRetryEnabled() );
+        return to;
+    }
+
+    public EventHandlerPb.EventHandler.JavaAction toProto(EventHandler.JavaAction from) {
+        EventHandlerPb.EventHandler.JavaAction.Builder to = EventHandlerPb.EventHandler.JavaAction.newBuilder();
+        if (from.getClassName() != null) {
+            to.setClassName( from.getClassName() );
+        }
+        for (Map.Entry<String, Object> pair : from.getInputParameters().entrySet()) {
+            to.putInputParameters( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        return to.build();
+    }
+
+    public EventHandler.JavaAction fromProto(EventHandlerPb.EventHandler.JavaAction from) {
+        EventHandler.JavaAction to = new EventHandler.JavaAction();
+        to.setClassName( from.getClassName() );
+        Map<String, Object> inputParametersMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getInputParametersMap().entrySet()) {
+            inputParametersMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setInputParameters(inputParametersMap);
+        return to;
+    }
+
+    public EventHandlerPb.EventHandler.FindUpdate toProto(EventHandler.FindUpdate from) {
+        EventHandlerPb.EventHandler.FindUpdate.Builder to = EventHandlerPb.EventHandler.FindUpdate.newBuilder();
+        if (from.getStatus() != null) {
+            to.setStatus( from.getStatus() );
+        }
+        if (from.getFailedReason() != null) {
+            to.setFailedReason( from.getFailedReason() );
+        }
+        if (from.getExpression() != null) {
+            to.setExpression( from.getExpression() );
+        }
+        to.addAllTaskRefNames( from.getTaskRefNames() );
+        to.putAllStatuses( from.getStatuses() );
+        to.putAllInputParameters( from.getInputParameters() );
+        return to.build();
+    }
+
+    public EventHandler.FindUpdate fromProto(EventHandlerPb.EventHandler.FindUpdate from) {
+        EventHandler.FindUpdate to = new EventHandler.FindUpdate();
+        to.setStatus( from.getStatus() );
+        to.setFailedReason( from.getFailedReason() );
+        to.setExpression( from.getExpression() );
+        to.setTaskRefNames( from.getTaskRefNamesList().stream().collect(Collectors.toCollection(HashSet::new)) );
+        to.setStatuses( from.getStatusesMap() );
+        to.setInputParameters( from.getInputParametersMap() );
+        return to;
+    }
+
+    public EventHandlerPb.EventHandler.UpdateTask toProto(EventHandler.UpdateTask from) {
+        EventHandlerPb.EventHandler.UpdateTask.Builder to = EventHandlerPb.EventHandler.UpdateTask.newBuilder();
+        if (from.getWorkflowId() != null) {
+            to.setWorkflowId( from.getWorkflowId() );
+        }
+        if (from.getTaskId() != null) {
+            to.setTaskId( from.getTaskId() );
+        }
+        if (from.getTaskRef() != null) {
+            to.setTaskRef( from.getTaskRef() );
+        }
+        if (from.getStatus() != null) {
+            to.setStatus( from.getStatus() );
+        }
+        if (from.getFailedReason() != null) {
+            to.setFailedReason( from.getFailedReason() );
+        }
+        to.setResetStartTime( from.isResetStartTime() );
+        to.putAllStatuses( from.getStatuses() );
+        for (Map.Entry<String, Object> pair : from.getOutput().entrySet()) {
+            to.putOutput( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        return to.build();
+    }
+
+    public EventHandler.UpdateTask fromProto(EventHandlerPb.EventHandler.UpdateTask from) {
+        EventHandler.UpdateTask to = new EventHandler.UpdateTask();
+        to.setWorkflowId( from.getWorkflowId() );
+        to.setTaskId( from.getTaskId() );
+        to.setTaskRef( from.getTaskRef() );
+        to.setStatus( from.getStatus() );
+        to.setFailedReason( from.getFailedReason() );
+        to.setResetStartTime( from.getResetStartTime() );
+        to.setStatuses( from.getStatusesMap() );
+        Map<String, Object> outputMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getOutputMap().entrySet()) {
+            outputMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setOutput(outputMap);
         return to;
     }
 
@@ -285,6 +405,21 @@ public abstract class AbstractProtoMapper {
             to.setFailTask( toProto( from.getFail_task() ) );
         }
         to.setExpandInlineJson( from.isExpandInlineJSON() );
+        if (from.getCondition() != null) {
+            to.setCondition( from.getCondition() );
+        }
+        if (from.getConditionClass() != null) {
+            to.setConditionClass( from.getConditionClass() );
+        }
+        if (from.getUpdate_task() != null) {
+            to.setUpdateTask( toProto( from.getUpdate_task() ) );
+        }
+        if (from.getFind_update() != null) {
+            to.setFindUpdate( toProto( from.getFind_update() ) );
+        }
+        if (from.getJava_action() != null) {
+            to.setJavaAction( toProto( from.getJava_action() ) );
+        }
         return to.build();
     }
 
@@ -301,6 +436,17 @@ public abstract class AbstractProtoMapper {
             to.setFail_task( fromProto( from.getFailTask() ) );
         }
         to.setExpandInlineJSON( from.getExpandInlineJson() );
+        to.setCondition( from.getCondition() );
+        to.setConditionClass( from.getConditionClass() );
+        if (from.hasUpdateTask()) {
+            to.setUpdate_task( fromProto( from.getUpdateTask() ) );
+        }
+        if (from.hasFindUpdate()) {
+            to.setFind_update( fromProto( from.getFindUpdate() ) );
+        }
+        if (from.hasJavaAction()) {
+            to.setJava_action( fromProto( from.getJavaAction() ) );
+        }
         return to;
     }
 
@@ -310,6 +456,9 @@ public abstract class AbstractProtoMapper {
             case start_workflow: to = EventHandlerPb.EventHandler.Action.Type.START_WORKFLOW; break;
             case complete_task: to = EventHandlerPb.EventHandler.Action.Type.COMPLETE_TASK; break;
             case fail_task: to = EventHandlerPb.EventHandler.Action.Type.FAIL_TASK; break;
+            case update_task: to = EventHandlerPb.EventHandler.Action.Type.UPDATE_TASK; break;
+            case find_update: to = EventHandlerPb.EventHandler.Action.Type.FIND_UPDATE; break;
+            case java_action: to = EventHandlerPb.EventHandler.Action.Type.JAVA_ACTION; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -321,8 +470,43 @@ public abstract class AbstractProtoMapper {
             case START_WORKFLOW: to = EventHandler.Action.Type.start_workflow; break;
             case COMPLETE_TASK: to = EventHandler.Action.Type.complete_task; break;
             case FAIL_TASK: to = EventHandler.Action.Type.fail_task; break;
+            case UPDATE_TASK: to = EventHandler.Action.Type.update_task; break;
+            case FIND_UPDATE: to = EventHandler.Action.Type.find_update; break;
+            case JAVA_ACTION: to = EventHandler.Action.Type.java_action; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
+        return to;
+    }
+
+    public EventPublishedPb.EventPublished toProto(EventPublished from) {
+        EventPublishedPb.EventPublished.Builder to = EventPublishedPb.EventPublished.newBuilder();
+        if (from.getId() != null) {
+            to.setId( from.getId() );
+        }
+        if (from.getType() != null) {
+            to.setType( from.getType() );
+        }
+        if (from.getSubject() != null) {
+            to.setSubject( from.getSubject() );
+        }
+        to.setPublished( from.getPublished() );
+        for (Map.Entry<String, Object> pair : from.getPayload().entrySet()) {
+            to.putPayload( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        return to.build();
+    }
+
+    public EventPublished fromProto(EventPublishedPb.EventPublished from) {
+        EventPublished to = new EventPublished();
+        to.setId( from.getId() );
+        to.setType( from.getType() );
+        to.setSubject( from.getSubject() );
+        to.setPublished( from.getPublished() );
+        Map<String, Object> payloadMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getPayloadMap().entrySet()) {
+            payloadMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setPayload(payloadMap);
         return to;
     }
 
@@ -350,6 +534,36 @@ public abstract class AbstractProtoMapper {
         return to;
     }
 
+    public RerunWorkflowParamsPb.RerunWorkflowParams toProto(RerunWorkflowParams from) {
+        RerunWorkflowParamsPb.RerunWorkflowParams.Builder to = RerunWorkflowParamsPb.RerunWorkflowParams.newBuilder();
+        if (from.getName() != null) {
+            to.setName( from.getName() );
+        }
+        if (from.getVersion() != null) {
+            to.setVersion( toProto( from.getVersion() ) );
+        }
+        for (Map.Entry<String, Object> pair : from.getInput().entrySet()) {
+            to.putInput( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        to.putAllConditions( from.getConditions() );
+        return to.build();
+    }
+
+    public RerunWorkflowParams fromProto(RerunWorkflowParamsPb.RerunWorkflowParams from) {
+        RerunWorkflowParams to = new RerunWorkflowParams();
+        to.setName( from.getName() );
+        if (from.hasVersion()) {
+            to.setVersion( fromProto( from.getVersion() ) );
+        }
+        Map<String, Object> inputMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getInputMap().entrySet()) {
+            inputMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setInput(inputMap);
+        to.setConditions( from.getConditionsMap() );
+        return to;
+    }
+
     public RerunWorkflowRequestPb.RerunWorkflowRequest toProto(RerunWorkflowRequest from) {
         RerunWorkflowRequestPb.RerunWorkflowRequest.Builder to = RerunWorkflowRequestPb.RerunWorkflowRequest.newBuilder();
         if (from.getReRunFromWorkflowId() != null) {
@@ -366,6 +580,12 @@ public abstract class AbstractProtoMapper {
         }
         if (from.getCorrelationId() != null) {
             to.setCorrelationId( from.getCorrelationId() );
+        }
+        for (Map.Entry<String, Object> pair : from.getTaskOutput().entrySet()) {
+            to.putTaskOutput( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        if (from.isResumeParents() != null) {
+            to.setResumeParents( from.isResumeParents() );
         }
         return to.build();
     }
@@ -385,6 +605,12 @@ public abstract class AbstractProtoMapper {
         }
         to.setTaskInput(taskInputMap);
         to.setCorrelationId( from.getCorrelationId() );
+        Map<String, Object> taskOutputMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getTaskOutputMap().entrySet()) {
+            taskOutputMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setTaskOutput(taskOutputMap);
+        to.setResumeParents( from.getResumeParents() );
         return to;
     }
 
@@ -460,6 +686,21 @@ public abstract class AbstractProtoMapper {
             to.setVersion( from.getVersion() );
         }
         to.putAllTaskToDomain( from.getTaskToDomain() );
+        if (from.isStandbyOnFail() != null) {
+            to.setStandbyOnFail( from.isStandbyOnFail() );
+        }
+        if (from.isRestartOnFail() != null) {
+            to.setRestartOnFail( from.isRestartOnFail() );
+        }
+        if (from.getRestartCount() != null) {
+            to.setRestartCount( from.getRestartCount() );
+        }
+        if (from.getRestartDelay() != null) {
+            to.setRestartDelay( from.getRestartDelay() );
+        }
+        if (from.getRerunWorkflow() != null) {
+            to.setRerunWorkflow( toProto( from.getRerunWorkflow() ) );
+        }
         return to.build();
     }
 
@@ -468,6 +709,13 @@ public abstract class AbstractProtoMapper {
         to.setName( from.getName() );
         to.setVersion( from.getVersion() );
         to.setTaskToDomain( from.getTaskToDomainMap() );
+        to.setStandbyOnFail( from.getStandbyOnFail() );
+        to.setRestartOnFail( from.getRestartOnFail() );
+        to.setRestartCount( from.getRestartCount() );
+        to.setRestartDelay( from.getRestartDelay() );
+        if (from.hasRerunWorkflow()) {
+            to.setRerunWorkflow( fromProto( from.getRerunWorkflow() ) );
+        }
         return to;
     }
 
@@ -614,6 +862,8 @@ public abstract class AbstractProtoMapper {
             case TIMED_OUT: to = TaskPb.Task.Status.TIMED_OUT; break;
             case READY_FOR_RERUN: to = TaskPb.Task.Status.READY_FOR_RERUN; break;
             case SKIPPED: to = TaskPb.Task.Status.SKIPPED; break;
+            case RESET: to = TaskPb.Task.Status.RESET; break;
+            case FAILED_NO_RETRY: to = TaskPb.Task.Status.FAILED_NO_RETRY; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -632,6 +882,8 @@ public abstract class AbstractProtoMapper {
             case TIMED_OUT: to = Task.Status.TIMED_OUT; break;
             case READY_FOR_RERUN: to = Task.Status.READY_FOR_RERUN; break;
             case SKIPPED: to = Task.Status.SKIPPED; break;
+            case RESET: to = Task.Status.RESET; break;
+            case FAILED_NO_RETRY: to = Task.Status.FAILED_NO_RETRY; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -781,6 +1033,10 @@ public abstract class AbstractProtoMapper {
         if (from.getOutputMessage() != null) {
             to.setOutputMessage( toProto( from.getOutputMessage() ) );
         }
+        for (Map.Entry<String, Object> pair : from.getInputData().entrySet()) {
+            to.putInputData( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        to.setResetStartTime( from.isResetStartTime() );
         return to.build();
     }
 
@@ -800,6 +1056,12 @@ public abstract class AbstractProtoMapper {
         if (from.hasOutputMessage()) {
             to.setOutputMessage( fromProto( from.getOutputMessage() ) );
         }
+        Map<String, Object> inputDataMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getInputDataMap().entrySet()) {
+            inputDataMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setInputData(inputDataMap);
+        to.setResetStartTime( from.getResetStartTime() );
         return to;
     }
 
@@ -810,6 +1072,8 @@ public abstract class AbstractProtoMapper {
             case FAILED: to = TaskResultPb.TaskResult.Status.FAILED; break;
             case FAILED_WITH_TERMINAL_ERROR: to = TaskResultPb.TaskResult.Status.FAILED_WITH_TERMINAL_ERROR; break;
             case COMPLETED: to = TaskResultPb.TaskResult.Status.COMPLETED; break;
+            case RESET: to = TaskResultPb.TaskResult.Status.RESET; break;
+            case FAILED_NO_RETRY: to = TaskResultPb.TaskResult.Status.FAILED_NO_RETRY; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -822,6 +1086,8 @@ public abstract class AbstractProtoMapper {
             case FAILED: to = TaskResult.Status.FAILED; break;
             case FAILED_WITH_TERMINAL_ERROR: to = TaskResult.Status.FAILED_WITH_TERMINAL_ERROR; break;
             case COMPLETED: to = TaskResult.Status.COMPLETED; break;
+            case RESET: to = TaskResult.Status.RESET; break;
+            case FAILED_NO_RETRY: to = TaskResult.Status.FAILED_NO_RETRY; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -934,6 +1200,22 @@ public abstract class AbstractProtoMapper {
         if (from.getExternalOutputPayloadStoragePath() != null) {
             to.setExternalOutputPayloadStoragePath( from.getExternalOutputPayloadStoragePath() );
         }
+        to.addAllWorkflowIds( from.getWorkflowIds() );
+        for (Map.Entry<String, Object> pair : from.getAuthorization().entrySet()) {
+            to.putAuthorization( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        if (from.getContextToken() != null) {
+            to.setContextToken( from.getContextToken() );
+        }
+        if (from.getContextUser() != null) {
+            to.setContextUser( from.getContextUser() );
+        }
+        to.addAllTags( from.getTags() );
+        to.setRestartCount( from.getRestartCount() );
+        to.setRerunCount( from.getRerunCount() );
+        if (from.getCancelledBy() != null) {
+            to.setCancelledBy( from.getCancelledBy() );
+        }
         return to.build();
     }
 
@@ -969,6 +1251,18 @@ public abstract class AbstractProtoMapper {
         }
         to.setExternalInputPayloadStoragePath( from.getExternalInputPayloadStoragePath() );
         to.setExternalOutputPayloadStoragePath( from.getExternalOutputPayloadStoragePath() );
+        to.setWorkflowIds( from.getWorkflowIdsList().stream().collect(Collectors.toCollection(ArrayList::new)) );
+        Map<String, Object> authorizationMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getAuthorizationMap().entrySet()) {
+            authorizationMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setAuthorization(authorizationMap);
+        to.setContextToken( from.getContextToken() );
+        to.setContextUser( from.getContextUser() );
+        to.setTags( from.getTagsList().stream().collect(Collectors.toCollection(HashSet::new)) );
+        to.setRestartCount( from.getRestartCount() );
+        to.setRerunCount( from.getRerunCount() );
+        to.setCancelledBy( from.getCancelledBy() );
         return to;
     }
 
@@ -981,6 +1275,8 @@ public abstract class AbstractProtoMapper {
             case TIMED_OUT: to = WorkflowPb.Workflow.WorkflowStatus.TIMED_OUT; break;
             case TERMINATED: to = WorkflowPb.Workflow.WorkflowStatus.TERMINATED; break;
             case PAUSED: to = WorkflowPb.Workflow.WorkflowStatus.PAUSED; break;
+            case CANCELLED: to = WorkflowPb.Workflow.WorkflowStatus.CANCELLED; break;
+            case RESET: to = WorkflowPb.Workflow.WorkflowStatus.RESET; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -995,6 +1291,8 @@ public abstract class AbstractProtoMapper {
             case TIMED_OUT: to = Workflow.WorkflowStatus.TIMED_OUT; break;
             case TERMINATED: to = Workflow.WorkflowStatus.TERMINATED; break;
             case PAUSED: to = Workflow.WorkflowStatus.PAUSED; break;
+            case CANCELLED: to = Workflow.WorkflowStatus.CANCELLED; break;
+            case RESET: to = Workflow.WorkflowStatus.RESET; break;
             default: throw new IllegalArgumentException("Unexpected enum constant: " + from);
         }
         return to;
@@ -1022,6 +1320,18 @@ public abstract class AbstractProtoMapper {
         to.setSchemaVersion( from.getSchemaVersion() );
         to.setRestartable( from.isRestartable() );
         to.setWorkflowStatusListenerEnabled( from.isWorkflowStatusListenerEnabled() );
+        for (Map.Entry<String, Object> pair : from.getEventMessages().entrySet()) {
+            to.putEventMessages( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        to.putAllInputValidation( from.getInputValidation() );
+        to.putAllAuthValidation( from.getAuthValidation() );
+        to.addAllRetryForbidden( from.getRetryForbidden() );
+        if (from.getCancelWorkflow() != null) {
+            to.setCancelWorkflow( from.getCancelWorkflow() );
+        }
+        if (from.getTags() != null) {
+            to.setTags( from.getTags() );
+        }
         return to.build();
     }
 
@@ -1041,6 +1351,16 @@ public abstract class AbstractProtoMapper {
         to.setSchemaVersion( from.getSchemaVersion() );
         to.setRestartable( from.getRestartable() );
         to.setWorkflowStatusListenerEnabled( from.getWorkflowStatusListenerEnabled() );
+        Map<String, Object> eventMessagesMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getEventMessagesMap().entrySet()) {
+            eventMessagesMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setEventMessages(eventMessagesMap);
+        to.setInputValidation( from.getInputValidationMap() );
+        to.setAuthValidation( from.getAuthValidationMap() );
+        to.setRetryForbidden( from.getRetryForbiddenList().stream().collect(Collectors.toCollection(ArrayList::new)) );
+        to.setCancelWorkflow( from.getCancelWorkflow() );
+        to.setTags( from.getTags() );
         return to;
     }
 
@@ -1090,6 +1410,7 @@ public abstract class AbstractProtoMapper {
         if (from.getExternalOutputPayloadStoragePath() != null) {
             to.setExternalOutputPayloadStoragePath( from.getExternalOutputPayloadStoragePath() );
         }
+        to.addAllWorkflowIds( from.getWorkflowIds() );
         return to.build();
     }
 
@@ -1111,6 +1432,7 @@ public abstract class AbstractProtoMapper {
         to.setFailedReferenceTaskNames( from.getFailedReferenceTaskNames() );
         to.setExternalInputPayloadStoragePath( from.getExternalInputPayloadStoragePath() );
         to.setExternalOutputPayloadStoragePath( from.getExternalOutputPayloadStoragePath() );
+        to.setWorkflowIds( from.getWorkflowIdsList().stream().collect(Collectors.toCollection(ArrayList::new)) );
         return to;
     }
 
@@ -1177,6 +1499,15 @@ public abstract class AbstractProtoMapper {
         if (from.isAsyncComplete() != null) {
             to.setAsyncComplete( from.isAsyncComplete() );
         }
+        for (Map.Entry<String, Object> pair : from.getEventMessages().entrySet()) {
+            to.putEventMessages( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        for (Map.Entry<String, Object> pair : from.getDefaults().entrySet()) {
+            to.putDefaults( pair.getKey(), toProto( pair.getValue() ) );
+        }
+        if (from.getTimeOutWorkflow() != null) {
+            to.setTimeOutWorkflow( toProto( from.getTimeOutWorkflow() ) );
+        }
         return to.build();
     }
 
@@ -1217,6 +1548,19 @@ public abstract class AbstractProtoMapper {
         to.setRateLimited( from.getRateLimited() );
         to.setDefaultExclusiveJoinTask( from.getDefaultExclusiveJoinTaskList().stream().collect(Collectors.toCollection(ArrayList::new)) );
         to.setAsyncComplete( from.getAsyncComplete() );
+        Map<String, Object> eventMessagesMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getEventMessagesMap().entrySet()) {
+            eventMessagesMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setEventMessages(eventMessagesMap);
+        Map<String, Object> defaultsMap = new HashMap<String, Object>();
+        for (Map.Entry<String, Value> pair : from.getDefaultsMap().entrySet()) {
+            defaultsMap.put( pair.getKey(), fromProto( pair.getValue() ) );
+        }
+        to.setDefaults(defaultsMap);
+        if (from.hasTimeOutWorkflow()) {
+            to.setTimeOutWorkflow( fromProto( from.getTimeOutWorkflow() ) );
+        }
         return to;
     }
 

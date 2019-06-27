@@ -19,13 +19,7 @@ import com.netflix.conductor.common.metadata.Auditable;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @ProtoMessage
@@ -33,7 +27,7 @@ public class Workflow extends Auditable{
 
     @ProtoEnum
 	public enum  WorkflowStatus {
-		RUNNING(false, false), COMPLETED(true, true), FAILED(true, false), TIMED_OUT(true, false), TERMINATED(true, false), PAUSED(false, true);
+		RUNNING(false, false), COMPLETED(true, true), FAILED(true, false), TIMED_OUT(true, false), TERMINATED(true, false), PAUSED(false, true), CANCELLED(true, false), RESET(true, false);
 
 		private boolean terminal;
 
@@ -114,6 +108,30 @@ public class Workflow extends Auditable{
 
     @ProtoField(id = 21)
 	private String externalOutputPayloadStoragePath;
+
+	@ProtoField(id = 22)
+	private List<String> workflowIds = new ArrayList<>();
+
+	@ProtoField(id = 23)
+	private Map<String, Object> authorization = new HashMap<>();
+
+	@ProtoField(id = 24)
+	private String contextToken;
+
+	@ProtoField(id = 25)
+	private String contextUser;
+
+	@ProtoField(id = 26)
+	private Set<String> tags = new HashSet<>();
+
+	@ProtoField(id = 27)
+	private int restartCount;
+
+	@ProtoField(id = 28)
+	private int rerunCount;
+
+	@ProtoField(id = 29)
+	private String cancelledBy;
 
 	public Workflow(){
 
@@ -433,6 +451,79 @@ public class Workflow extends Auditable{
 		return found.getLast();
 	}
 
+	public long getDuration() {
+		return getEndTime() - getStartTime();
+	}
+
+	public boolean isSubWorkflow() {
+		final String parentId = getParentWorkflowId();
+		return parentId != null && !parentId.isEmpty();
+	}
+
+	public List<String> getWorkflowIds() {
+		return workflowIds;
+	}
+
+	public void setWorkflowIds(List<String> workflowIds) {
+		this.workflowIds = workflowIds;
+	}
+
+	public Map<String, Object> getAuthorization() {
+		return authorization;
+	}
+
+	public void setAuthorization(Map<String, Object> authorization) {
+		this.authorization = authorization;
+	}
+
+	public String getContextToken() {
+		return contextToken;
+	}
+
+	public void setContextToken(String contextToken) {
+		this.contextToken = contextToken;
+	}
+
+	public String getContextUser() {
+		return contextUser;
+	}
+
+	public void setContextUser(String contextUser) {
+		this.contextUser = contextUser;
+	}
+
+	public Set<String> getTags() {
+		return tags;
+	}
+
+	public void setTags(Set<String> tags) {
+		this.tags = tags;
+	}
+
+	public int getRestartCount() {
+		return restartCount;
+	}
+
+	public void setRestartCount(int restartCount) {
+		this.restartCount = restartCount;
+	}
+
+	public int getRerunCount() {
+		return rerunCount;
+	}
+
+	public void setRerunCount(int rerunCount) {
+		this.rerunCount = rerunCount;
+	}
+
+	public String getCancelledBy() {
+		return cancelledBy;
+	}
+
+	public void setCancelledBy(String cancelledBy) {
+		this.cancelledBy = cancelledBy;
+	}
+
 	/**
 	 * @return a deep copy of the workflow instance
 	 * Note: This does not copy the following fields:
@@ -457,6 +548,14 @@ public class Workflow extends Auditable{
 		copy.setEvent(event);
 		copy.setReasonForIncompletion(reasonForIncompletion);
 		copy.setWorkflowDefinition(workflowDefinition);
+		copy.setWorkflowIds(workflowIds);
+		copy.setAuthorization(authorization);
+		copy.setContextToken(contextToken);
+		copy.setContextUser(contextUser);
+		copy.setTags(tags);
+		copy.setRestartCount(restartCount);
+		copy.setRerunCount(rerunCount);
+		copy.setCancelledBy(cancelledBy);
 
 		copy.setTasks(tasks.stream()
 				.map(Task::copy)

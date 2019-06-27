@@ -80,6 +80,24 @@ public class WorkflowDef extends Auditable {
 	@ProtoField(id = 10)
 	private boolean workflowStatusListenerEnabled = false;
 
+	@ProtoField(id = 11)
+	private Map<String, Object> eventMessages = new HashMap<>();
+
+	@ProtoField(id = 12)
+	private Map<String, String> inputValidation = new HashMap<>();
+
+	@ProtoField(id = 13)
+	private Map<String, String> authValidation = new HashMap<>();
+
+	@ProtoField(id = 14)
+	private List<String> retryForbidden = new LinkedList<String>();
+
+	@ProtoField(id = 15)
+	private String cancelWorkflow;
+
+	@ProtoField(id = 16)
+	private String tags;
+
 	/**
 	 * @return the name
 	 */
@@ -226,6 +244,54 @@ public class WorkflowDef extends Auditable {
 	 */
 	public void setWorkflowStatusListenerEnabled(boolean workflowStatusListenerEnabled) {
 		this.workflowStatusListenerEnabled = workflowStatusListenerEnabled;
+	}
+
+	public Map<String, Object> getEventMessages() {
+		return eventMessages;
+	}
+
+	public void setEventMessages(Map<String, Object> eventMessages) {
+		this.eventMessages = eventMessages;
+	}
+
+	public Map<String, String> getInputValidation() {
+		return inputValidation;
+	}
+
+	public void setInputValidation(Map<String, String> inputValidation) {
+		this.inputValidation = inputValidation;
+	}
+
+	public Map<String, String> getAuthValidation() {
+		return authValidation;
+	}
+
+	public void setAuthValidation(Map<String, String> authValidation) {
+		this.authValidation = authValidation;
+	}
+
+	public List<String> getRetryForbidden() {
+		return retryForbidden;
+	}
+
+	public void setRetryForbidden(List<String> retryForbidden) {
+		this.retryForbidden = retryForbidden;
+	}
+
+	public String getCancelWorkflow() {
+		return cancelWorkflow;
+	}
+
+	public void setCancelWorkflow(String cancelWorkflow) {
+		this.cancelWorkflow = cancelWorkflow;
+	}
+
+	public String getTags() {
+		return tags;
+	}
+
+	public void setTags(String tags) {
+		this.tags = tags;
 	}
 
 	public String key(){

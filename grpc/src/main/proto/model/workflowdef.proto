@@ -19,4 +19,10 @@ message WorkflowDef {
     int32 schema_version = 8;
     bool restartable = 9;
     bool workflow_status_listener_enabled = 10;
+    map<string, google.protobuf.Value> event_messages = 11;
+    map<string, string> input_validation = 12;
+    map<string, string> auth_validation = 13;
+    repeated string retry_forbidden = 14;
+    string cancel_workflow = 15;
+    string tags = 16;
 }

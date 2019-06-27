@@ -23,4 +23,10 @@ message EventExecution {
     EventExecution.Status status = 6;
     EventHandler.Action.Type action = 7;
     map<string, google.protobuf.Value> output = 8;
+    string subject = 9;
+    int64 received = 10;
+    int64 processed = 11;
+    int64 started = 12;
+    int64 accepted = 13;
+    repeated string tags = 14;
 }

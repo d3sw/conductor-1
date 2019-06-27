@@ -31,7 +31,11 @@ public class Message {
 	private String id;
 	
 	private String receipt;
-	
+
+	private long received;
+
+	private long accepted;
+
 	public Message() {
 		
 	}
@@ -84,6 +88,38 @@ public class Message {
 	 */
 	public void setReceipt(String receipt) {
 		this.receipt = receipt;
+	}
+
+	/**
+	 *
+	 * @return The received time
+	 */
+	public long getReceived() {
+		return received;
+	}
+
+	/**
+	 *
+	 * @param received The received time
+	 */
+	public void setReceived(long received) {
+		this.received = received;
+	}
+
+	/**
+	 *
+	 * @return The accepted time
+	 */
+	public long getAccepted() {
+		return accepted;
+	}
+
+	/**
+	 *
+	 * @param accepted The accepted time
+	 */
+	public void setAccepted(long accepted) {
+		this.accepted = accepted;
 	}
 
 	@Override

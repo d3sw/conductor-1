@@ -18,14 +18,17 @@
  */
 package com.netflix.conductor.common.run;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
-import java.util.stream.Collectors;
-
-import com.github.vmg.protogen.annotations.*;
+import com.github.vmg.protogen.annotations.ProtoField;
+import com.github.vmg.protogen.annotations.ProtoMessage;
 import com.netflix.conductor.common.run.Workflow.WorkflowStatus;
 import org.apache.commons.lang3.StringUtils;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.TimeZone;
+import java.util.stream.Collectors;
 
 /**
  * Captures workflow summary info to be indexed in Elastic Search.
@@ -87,6 +90,9 @@ public class WorkflowSummary {
 
 	@ProtoField(id = 16)
 	private String externalOutputPayloadStoragePath;
+
+	@ProtoField(id = 17)
+	private List<String> workflowIds = new ArrayList<>();
 	
 	public WorkflowSummary() {
 		
@@ -128,6 +134,7 @@ public class WorkflowSummary {
 		if (StringUtils.isNotBlank(workflow.getExternalOutputPayloadStoragePath())) {
 			this.externalOutputPayloadStoragePath = workflow.getExternalOutputPayloadStoragePath();
 		}
+		this.workflowIds = workflow.getWorkflowIds();
 	}
 
 	/**
@@ -322,5 +329,13 @@ public class WorkflowSummary {
 	 */
 	public void setExternalOutputPayloadStoragePath(String externalOutputPayloadStoragePath) {
 		this.externalOutputPayloadStoragePath = externalOutputPayloadStoragePath;
+	}
+
+	public List<String> getWorkflowIds() {
+		return workflowIds;
+	}
+
+	public void setWorkflowIds(List<String> workflowIds) {
+		this.workflowIds = workflowIds;
 	}
 }

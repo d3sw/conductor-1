@@ -42,6 +42,21 @@ public class SubWorkflowParams {
     @ProtoField(id = 3)
     private Map<String, String> taskToDomain;
 
+    @ProtoField(id = 4)
+    private Boolean standbyOnFail;
+
+    @ProtoField(id = 5)
+    private Boolean restartOnFail;
+
+    @ProtoField(id = 6)
+    private Integer restartCount;
+
+    @ProtoField(id = 7)
+    private Long restartDelay;
+
+    @ProtoField(id = 8)
+    private RerunWorkflowParams rerunWorkflow;
+
     /**
      * @return the name
      */
@@ -76,10 +91,81 @@ public class SubWorkflowParams {
     public Map<String, String> getTaskToDomain() {
         return taskToDomain;
     }
+
     /**
      * @param taskToDomain the taskToDomain to set
      */
     public void setTaskToDomain(Map<String, String> taskToDomain) {
         this.taskToDomain = taskToDomain;
+    }
+
+    /**
+     * @return standbyOnFail flag
+     */
+    public Boolean isStandbyOnFail() {
+        return standbyOnFail;
+    }
+
+    /**
+     * @param standbyOnFail flag
+     */
+    public void setStandbyOnFail(Boolean standbyOnFail) {
+        this.standbyOnFail = standbyOnFail;
+    }
+
+    /**
+     * @return restartOnFail flag
+     */
+    public Boolean isRestartOnFail() {
+        return restartOnFail;
+    }
+
+    /**
+     * @param restartOnFail flag
+     */
+    public void setRestartOnFail(Boolean restartOnFail) {
+        this.restartOnFail = restartOnFail;
+    }
+
+    /**
+     * @return restartCount allowed
+     */
+    public Integer getRestartCount() {
+        return restartCount;
+    }
+
+    /**
+     * @param restartCount restartCount allowed
+     */
+    public void setRestartCount(Integer restartCount) {
+        this.restartCount = restartCount;
+    }
+
+    /**
+     * @return restartDelay Delay between restarts
+     */
+    public Long getRestartDelay() {
+        return restartDelay;
+    }
+
+    /**
+     * @param restartDelay Delay between restarts
+     */
+    public void setRestartDelay(Long restartDelay) {
+        this.restartDelay = restartDelay;
+    }
+
+    /**
+     * @return rerunWorkflow params
+     */
+    public RerunWorkflowParams getRerunWorkflow() {
+        return rerunWorkflow;
+    }
+
+    /**
+     * @param rerunWorkflow params
+     */
+    public void setRerunWorkflow(RerunWorkflowParams rerunWorkflow) {
+        this.rerunWorkflow = rerunWorkflow;
     }
 }

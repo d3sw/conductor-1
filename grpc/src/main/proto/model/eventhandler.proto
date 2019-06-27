@@ -9,6 +9,28 @@ option java_outer_classname = "EventHandlerPb";
 option go_package = "github.com/netflix/conductor/client/gogrpc/conductor/model";
 
 message EventHandler {
+    message JavaAction {
+        string class_name = 1;
+        map<string, google.protobuf.Value> input_parameters = 2;
+    }
+    message FindUpdate {
+        string status = 1;
+        string failed_reason = 2;
+        string expression = 3;
+        repeated string task_ref_names = 4;
+        map<string, string> statuses = 5;
+        map<string, string> input_parameters = 6;
+    }
+    message UpdateTask {
+        string workflow_id = 1;
+        string task_id = 2;
+        string task_ref = 3;
+        string status = 4;
+        string failed_reason = 5;
+        bool reset_start_time = 6;
+        map<string, string> statuses = 7;
+        map<string, google.protobuf.Value> output = 8;
+    }
     message StartWorkflow {
         string name = 1;
         int32 version = 2;
@@ -29,16 +51,27 @@ message EventHandler {
             START_WORKFLOW = 0;
             COMPLETE_TASK = 1;
             FAIL_TASK = 2;
+            UPDATE_TASK = 3;
+            FIND_UPDATE = 4;
+            JAVA_ACTION = 5;
         }
         EventHandler.Action.Type action = 1;
         EventHandler.StartWorkflow start_workflow = 2;
         EventHandler.TaskDetails complete_task = 3;
         EventHandler.TaskDetails fail_task = 4;
         bool expand_inline_json = 5;
+        string condition = 6;
+        string condition_class = 7;
+        EventHandler.UpdateTask update_task = 8;
+        EventHandler.FindUpdate find_update = 9;
+        EventHandler.JavaAction java_action = 10;
     }
     string name = 1;
     string event = 2;
     string condition = 3;
     repeated EventHandler.Action actions = 4;
     bool active = 5;
+    string condition_class = 6;
+    string tags = 7;
+    bool retry_enabled = 8;
 }

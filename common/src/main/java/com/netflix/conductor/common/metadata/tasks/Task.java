@@ -42,7 +42,9 @@ public class Task {
         SCHEDULED(false, true, true),
         TIMED_OUT(true, false, true),
         READY_FOR_RERUN(false, true, true),
-        SKIPPED(true, true, false);
+        SKIPPED(true, true, false),
+        RESET(true, false, false),
+        FAILED_NO_RETRY(true, false, false);
 
         private boolean terminal;
 

@@ -48,7 +48,7 @@ public class WorkflowTask {
 	 */
 	@Deprecated
 	public enum Type {
-		SIMPLE, DYNAMIC, FORK_JOIN, FORK_JOIN_DYNAMIC, DECISION, JOIN, SUB_WORKFLOW, EVENT, WAIT, USER_DEFINED;
+		SIMPLE, DYNAMIC, FORK_JOIN, FORK_JOIN_DYNAMIC, DECISION, JOIN, SUB_WORKFLOW, EVENT, WAIT, BATCH, USER_DEFINED;
 		private static Set<String> systemTasks = new HashSet<>();
 		static {
 			systemTasks.add(Type.SIMPLE.name());
@@ -60,6 +60,7 @@ public class WorkflowTask {
 			systemTasks.add(Type.SUB_WORKFLOW.name());
 			systemTasks.add(Type.EVENT.name());
 			systemTasks.add(Type.WAIT.name());
+			systemTasks.add(Type.BATCH.name());
 			//Do NOT add USER_DEFINED here...
 		}
 		public static boolean isSystemTask(String name) {
@@ -159,6 +160,15 @@ public class WorkflowTask {
 
 	@ProtoField(id = 23)
 	private Boolean asyncComplete = false;
+
+	@ProtoField(id = 24)
+	private Map<String, Object> eventMessages = new HashMap<>();
+
+	@ProtoField(id = 25)
+	private Map<String, Object> defaults = new HashMap<>();
+
+	@ProtoField(id = 26)
+	private SubWorkflowParams timeOutWorkflow;
 
 	/**
 	 * @return the name
@@ -478,6 +488,30 @@ public class WorkflowTask {
 
 	public void setDefaultExclusiveJoinTask(List<String> defaultExclusiveJoinTask) {
 		this.defaultExclusiveJoinTask = defaultExclusiveJoinTask;
+	}
+
+	public Map<String, Object> getEventMessages() {
+		return eventMessages;
+	}
+
+	public void setEventMessages(Map<String, Object> eventMessages) {
+		this.eventMessages = eventMessages;
+	}
+
+	public Map<String, Object> getDefaults() {
+		return defaults;
+	}
+
+	public void setDefaults(Map<String, Object> defaults) {
+		this.defaults = defaults;
+	}
+
+	public SubWorkflowParams getTimeOutWorkflow() {
+		return timeOutWorkflow;
+	}
+
+	public void setTimeOutWorkflow(SubWorkflowParams timeOutWorkflow) {
+		this.timeOutWorkflow = timeOutWorkflow;
 	}
 
 	private Collection<List<WorkflowTask>> children() {

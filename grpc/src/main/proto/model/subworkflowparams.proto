@@ -1,6 +1,7 @@
 syntax = "proto3";
 package conductor.proto;
 
+import "model/rerunworkflowparams.proto";
 
 option java_package = "com.netflix.conductor.proto";
 option java_outer_classname = "SubWorkflowParamsPb";
@@ -10,4 +11,9 @@ message SubWorkflowParams {
     string name = 1;
     int32 version = 2;
     map<string, string> task_to_domain = 3;
+    bool standby_on_fail = 4;
+    bool restart_on_fail = 5;
+    int32 restart_count = 6;
+    int64 restart_delay = 7;
+    RerunWorkflowParams rerun_workflow = 8;
 }
