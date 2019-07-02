@@ -466,9 +466,10 @@ public class Elasticsearch6RestQueueDAO extends Elasticsearch6RestAbstractDAO im
             String typeName = toTypeName(queueName);
             GetResponse record = findOne(indexName, typeName, id);
             if (!record.isExists()) {
+                boolean created = pushIfNotExists(queueName, id, 0);
                 if (logger.isDebugEnabled())
-                    logger.debug("wakeup: no record exists for " + queueName + "/" + id);
-                return pushIfNotExists(queueName, id, 0);
+                    logger.debug("wakeup: created for " + queueName + "/" + id + "/" + created);
+                return created;
             }
 
             Map<String, Object> recordMap = record.getSourceAsMap();
@@ -479,7 +480,7 @@ public class Elasticsearch6RestQueueDAO extends Elasticsearch6RestAbstractDAO im
             // pop happened but setUnackTimeout dit not yet - means the record in the decider at this moment
             if (popped && !unacked) {
                 if (logger.isDebugEnabled())
-                    logger.debug("wakeup: record popped for " + queueName + "/" + id);
+                    logger.debug("wakeup: active decider for " + queueName + "/" + id);
                 return false;
             }
 
@@ -528,10 +529,10 @@ public class Elasticsearch6RestQueueDAO extends Elasticsearch6RestAbstractDAO im
             map.put("payload", payload);
             map.put("deliverOn", deliverOn);
             map.put("unackOn", 0L);
-            boolean result = insert(indexName, typeName, id, map);
+            boolean created = insert(indexName, typeName, id, map);
             if (logger.isDebugEnabled())
-                logger.debug("pushMessage: result {}/{}/{}/{}", queueName, id, payload, result);
-            return result;
+                logger.debug("pushMessage: result {}/{}/{}/{}", queueName, id, payload, created);
+            return created;
         } catch (Exception ex) {
             logger.error("pushMessage: failed for {}/{}/{} with {}", queueName, id, payload, ex.getMessage(), ex);
             return false;
