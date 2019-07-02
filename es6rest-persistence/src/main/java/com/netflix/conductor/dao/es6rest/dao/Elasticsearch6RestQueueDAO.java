@@ -466,10 +466,9 @@ public class Elasticsearch6RestQueueDAO extends Elasticsearch6RestAbstractDAO im
             String typeName = toTypeName(queueName);
             GetResponse record = findOne(indexName, typeName, id);
             if (!record.isExists()) {
-                pushIfNotExists(queueName, id, 0);
                 if (logger.isDebugEnabled())
                     logger.debug("wakeup: no record exists for " + queueName + "/" + id);
-                return false;
+                return pushIfNotExists(queueName, id, 0);
             }
 
             Map<String, Object> recordMap = record.getSourceAsMap();
