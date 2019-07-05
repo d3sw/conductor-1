@@ -103,6 +103,8 @@ public class WorkflowTask {
 	private Boolean optional;
 
 	private SubWorkflowParams timeOutWorkflow;
+
+	private String terminationStatus;
 	
 	/**
 	 * @return the name
@@ -385,6 +387,15 @@ public class WorkflowTask {
 	 */
 	public SubWorkflowParams getTimeOutWorkflow() {
 		return timeOutWorkflow;
+	}
+
+
+	public String getTerminationStatus() {
+		return terminationStatus;
+	}
+
+	public void setTerminationStatus(String terminationStatus) {
+		this.terminationStatus = terminationStatus;
 	}
 
 	/**
