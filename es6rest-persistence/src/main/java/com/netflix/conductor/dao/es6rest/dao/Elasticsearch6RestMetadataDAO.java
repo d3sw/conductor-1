@@ -54,7 +54,7 @@ public class Elasticsearch6RestMetadataDAO extends Elasticsearch6RestAbstractDAO
         refreshTaskDefs();
         int cacheRefreshTime = config.getIntProperty("conductor.taskdef.cache.refresh.time.seconds", 60);
         Executors.newSingleThreadScheduledExecutor()
-                .scheduleWithFixedDelay(this::refreshTaskDefs, cacheRefreshTime, cacheRefreshTime, TimeUnit.SECONDS);
+            .scheduleWithFixedDelay(this::refreshTaskDefs, cacheRefreshTime, cacheRefreshTime, TimeUnit.SECONDS);
     }
 
     @Override
@@ -331,7 +331,7 @@ public class Elasticsearch6RestMetadataDAO extends Elasticsearch6RestAbstractDAO
         }
 
         handlers = handlers.stream().filter(eh -> eh.getEvent().equals(event) && (!activeOnly || eh.isActive()))
-                .collect(Collectors.toList());
+            .collect(Collectors.toList());
         if (logger.isDebugEnabled())
             logger.debug("getEventHandlersForEvent: result={}", toJson(handlers));
 
@@ -421,7 +421,7 @@ public class Elasticsearch6RestMetadataDAO extends Elasticsearch6RestAbstractDAO
         ensureIndexExists(indexName);
 
         List<Pair<String, String>> result = new LinkedList<>();
-        try(RestHighLevelClient client = new RestHighLevelClient(builder)) {
+        try (RestHighLevelClient client = new RestHighLevelClient(builder)) {
 
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             sourceBuilder.query(QueryBuilders.matchAllQuery());
@@ -438,7 +438,7 @@ public class Elasticsearch6RestMetadataDAO extends Elasticsearch6RestAbstractDAO
 
             while (searchHits != null && searchHits.length > 0) {
                 for (SearchHit hit : searchHits) {
-                    String value = (String)hit.getSourceAsMap().get("value");
+                    String value = (String) hit.getSourceAsMap().get("value");
                     result.add(Pair.of(hit.getId(), value));
                 }
 
