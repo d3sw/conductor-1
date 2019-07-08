@@ -13,6 +13,7 @@ import org.elasticsearch.action.search.ClearScrollRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchScrollRequest;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -42,8 +43,8 @@ public class Elasticsearch6RestMetadataDAO extends Elasticsearch6RestAbstractDAO
     private Map<String, TaskDef> taskDefCache = new HashMap<>();
 
     @Inject
-    public Elasticsearch6RestMetadataDAO(RestHighLevelClient client, Configuration config, ObjectMapper mapper) {
-        super(client, config, mapper, "metadata");
+    public Elasticsearch6RestMetadataDAO(RestClientBuilder builder, Configuration config, ObjectMapper mapper) {
+        super(builder, config, mapper, "metadata");
 
         ensureIndexExists(toIndexName(CONFIG), toTypeName(CONFIG));
         ensureIndexExists(toIndexName(TASK_DEFS), toTypeName(TASK_DEFS));
@@ -420,7 +421,7 @@ public class Elasticsearch6RestMetadataDAO extends Elasticsearch6RestAbstractDAO
         ensureIndexExists(indexName);
 
         List<Pair<String, String>> result = new LinkedList<>();
-        try {
+        try(RestHighLevelClient client = new RestHighLevelClient(builder)) {
 
             SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
             sourceBuilder.query(QueryBuilders.matchAllQuery());
