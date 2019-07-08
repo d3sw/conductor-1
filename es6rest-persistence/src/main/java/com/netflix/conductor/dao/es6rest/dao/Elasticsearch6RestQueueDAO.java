@@ -43,7 +43,6 @@ public class Elasticsearch6RestQueueDAO extends Elasticsearch6RestAbstractDAO im
     private static final Logger logger = LoggerFactory.getLogger(Elasticsearch6RestQueueDAO.class);
     private static final Set<String> queues = ConcurrentHashMap.newKeySet();
     private static final int unackScheduleInMS = 60_000;
-    private static final long poppedThreshold = 500; // TODO What is the best value ?
     private static final int unackTime = 60_000;
     private static final String DEFAULT = "default";
     private final int stalePeriod;
