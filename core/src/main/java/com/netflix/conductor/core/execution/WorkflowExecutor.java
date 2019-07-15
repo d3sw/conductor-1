@@ -235,7 +235,12 @@ public class WorkflowExecutor {
 			// send wf start message
 			notifyWorkflowStatus(wf, StartEndState.start);
 
-			decide(workflowId);
+			// Who calls decider ? Sweeper or current thread?
+			if (lazyDecider) {
+				wakeUpSweeper(workflowId);
+			} else {
+				decide(workflowId);
+			}
 			logger.debug("Workflow has started. Current status=" + wf.getStatus() + ",workflowId=" + wf.getWorkflowId()
 					+ ",correlationId=" + wf.getCorrelationId()+ ",contextUser=" + wf.getContextUser());
 			return workflowId;
@@ -711,7 +716,7 @@ public class WorkflowExecutor {
 				workflow.getOutput().put("conductor.cancel_workflow", cancelWFId);
 
 			} catch (Exception e) {
-				logger.warn("Error workflow " + cancelWorkflow + " failed to start.  reason: " + e.getMessage());
+				logger.debug("Error workflow " + cancelWorkflow + " failed to start.  reason: " + e.getMessage());
 				workflow.getOutput().put("conductor.cancel_workflow", "Error workflow " + cancelWorkflow + " failed to start.  reason: " + e.getMessage());
 				Monitors.recordWorkflowStartError(cancelWorkflow);
 			}
@@ -828,6 +833,9 @@ public class WorkflowExecutor {
 		List<Task> tasks = workflow.getTasks();
 		cancelTasks(workflow, tasks, null);
 
+		logger.debug("Removing decider record for " + workflow.getWorkflowId());
+		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
+
 		// If the following lines, for some reason fails, the sweep will take
 		// care of this again!
 		if (workflow.getParentWorkflowId() != null) {
@@ -868,7 +876,7 @@ public class WorkflowExecutor {
 				try {
 					startWorkflow(workflowName, workflowVersion, input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null, null, workflow.getWorkflowIds());
 				} catch (Exception e) {
-					logger.warn("Error workflow " + workflowName + " failed to start. reason: " + e.getMessage(), e);
+					logger.debug("Error workflow " + workflowName + " failed to start. reason: " + e.getMessage(), e);
 					Monitors.recordWorkflowStartError(workflowName);
 				}
 			}
@@ -914,13 +922,11 @@ public class WorkflowExecutor {
 				workflow.getOutput().put("conductor.failure_workflow", failureWFId);
 
 			} catch (Exception e) {
-				logger.warn("Error workflow " + failureWorkflow + " failed to start.  reason: " + e.getMessage());
+				logger.debug("Error workflow " + failureWorkflow + " failed to start.  reason: " + e.getMessage());
 				workflow.getOutput().put("conductor.failure_workflow", "Error workflow " + failureWorkflow + " failed to start.  reason: " + e.getMessage());
 				Monitors.recordWorkflowStartError(failureWorkflow);
 			}
 		}
-
-		queue.remove(deciderQueue, workflow.getWorkflowId());	//remove from the sweep queue
 
 		// send wf end message
 		notifyWorkflowStatus(workflow, StartEndState.end);
@@ -939,7 +945,7 @@ public class WorkflowExecutor {
 
 	public void updateTask(TaskResult result) throws Exception {
 		if (result == null) {
-			logger.warn("null task given for update..." + result);
+			logger.debug("null task given for update..." + result);
 			throw new ApplicationException(Code.INVALID_INPUT, "Task object is null");
 		}
 		String workflowId = result.getWorkflowInstanceId();
@@ -953,7 +959,7 @@ public class WorkflowExecutor {
 				task.setStatus(Status.COMPLETED);
 			}
 			String msg = "Workflow " + wf.getWorkflowId() + " is already completed as " + wf.getStatus() + ", task=" + task.getTaskType() + ",reason=" + wf.getReasonForIncompletion()+",correlationId="+wf.getCorrelationId() + ",contextUser=" + wf.getContextUser();
-			logger.warn(msg);
+			logger.debug(msg);
 			Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), wf.getStatus());
 			return;
 		}
@@ -962,7 +968,7 @@ public class WorkflowExecutor {
 			// Task was already updated....
 			queue.remove(QueueUtils.getQueueName(task), result.getTaskId());
 			String msg = "Task is already completed as " + task.getStatus() + "@" + task.getEndTime() + ", workflow status=" + wf.getStatus() + ",workflowId=" + wf.getWorkflowId() + ",taskId=" + task.getTaskId()+",correlationId="+wf.getCorrelationId() + ",contextUser=" + wf.getContextUser();
-			logger.warn(msg);
+			logger.debug(msg);
 			Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), task.getStatus());
 			return;
 		}
@@ -992,7 +998,7 @@ public class WorkflowExecutor {
 			// Task was already updated....
 			queue.remove(QueueUtils.getQueueName(task2), result.getTaskId());
 			String msg = "Task is already terminal as " + task2.getStatus() + "@" + task2.getEndTime() + ", workflow status=" + wf.getStatus() + ",workflowId=" + wf.getWorkflowId() + ",taskId=" + task2.getTaskId()+",correlationId="+wf.getCorrelationId() + ",contextUser=" + wf.getContextUser();
-			logger.warn(msg);
+			logger.debug(msg);
 			return;
 		}
 		edao.updateTask(task);
@@ -1053,6 +1059,8 @@ public class WorkflowExecutor {
 	private void wakeUpSweeper(String workflowId) {
 		boolean active = queue.exists(WorkflowExecutor.sweeperQueue, workflowId);
 		if (active) {
+			logger.debug("wakeUpSweeper. Sweeper in progress for " + workflowId);
+
 			// Wait a little bit. If the current sweeper call is empty
 			// then it will exit soon and we can wake it up again
 			Uninterruptibles.sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
@@ -1062,13 +1070,14 @@ public class WorkflowExecutor {
 
 			// Exit if it still active
 			if (active) {
+				logger.debug("wakeUpSweeper. Sweeper still in progress for " + workflowId);
 				return;
 			}
 		}
 
 		// Otherwise wake it up by unacking message via queue
 		boolean result = queue.wakeup(WorkflowExecutor.deciderQueue, workflowId);
-		logger.debug("wakeup " + result + " for " + workflowId);
+		logger.debug("wakeUpSweeper " + result + " for " + workflowId);
 	}
 
 	public List<Task> getTasks(String taskType, String startKey, int count) throws Exception {
@@ -1105,8 +1114,17 @@ public class WorkflowExecutor {
 	 * @throws Exception If there was an error - caller should retry in this case.
 	 */
 	public boolean decide(String workflowId) throws Exception {
+		if (workflowId == null || workflowId.isEmpty()) {
+			logger.error("ONECOND-1106: Invoked decide() with an empty or null Workflow ID");
+			return false;
+		}
 
 		Workflow workflow = edao.getWorkflow(workflowId, true);
+		if (workflow == null) {
+			logger.error("ONECOND-1106: getWorkflow() returned null for workflow: " + workflowId);
+			return false;
+		}
+
 		if (workflow.getStatus().isTerminal()) {
 			logger.debug("Invoked decide for finished workflow " + workflowId);
 			return true;
@@ -1281,13 +1299,13 @@ public class WorkflowExecutor {
 
 			Task task = edao.getTask(taskId);
 			if (task == null) {
-				logger.warn("No task found for task id = " + taskId + ". System task is " + systemTask);
+				logger.debug("No task found for task id = " + taskId + ". System task is " + systemTask);
 				return;
 			}
 
 			if(task.getStatus().isTerminal()) {
 				//Tune the SystemTaskWorkerCoordinator's queues - if the queue size is very big this can happen!
-				logger.warn("Task {}/{} was already completed.", task.getTaskType(), task.getTaskId());
+				logger.debug("Task {}/{} was already completed.", task.getTaskType(), task.getTaskId());
 				queue.remove(QueueUtils.getQueueName(task), task.getTaskId());
 				return;
 			}
@@ -1301,7 +1319,7 @@ public class WorkflowExecutor {
 			}
 
 			if(workflow.getStatus().isTerminal()) {
-				logger.warn("Workflow {} has been completed for {}/{}", workflow.getWorkflowId(), systemTask.getName(), task.getTaskId());
+				logger.debug("Workflow {} has been completed for {}/{}", workflow.getWorkflowId(), systemTask.getName(), task.getTaskId());
 				if(!task.getStatus().isTerminal()) {
 					task.setStatus(Status.CANCELED);
 				}
@@ -1314,7 +1332,7 @@ public class WorkflowExecutor {
 			if(task.getStatus().equals(Status.SCHEDULED)) {
 
 				if(edao.exceedsInProgressLimit(task)) {
-					logger.warn("Rate limited for {}", task.getTaskDefName());
+					logger.debug("Rate limited for {}", task.getTaskDefName());
 					return;
 				}
 			}
@@ -1342,6 +1360,7 @@ public class WorkflowExecutor {
 					} catch (Exception ex) {
 						task.setStatus(Status.FAILED);
 						task.setReasonForIncompletion(ex.getMessage());
+						logger.debug("Task {}/{} failed with Exception {}.", task.getTaskType(), task.getTaskId(),ex.getMessage());
 					}
 					break;
 
@@ -1362,7 +1381,7 @@ public class WorkflowExecutor {
 					workflow.getWorkflowId(), workflow.getCorrelationId(), workflow.getContextUser());
 
 		} catch (Exception e) {
-			logger.warn("ExecuteSystemTask failed with " + e.getMessage() + " for task id=" + taskId + ", system task=" + systemTask, e);
+			logger.debug("ExecuteSystemTask failed with " + e.getMessage() + " for task id=" + taskId + ", system task=" + systemTask, e);
 		}
 	}
 
@@ -1525,7 +1544,7 @@ public class WorkflowExecutor {
 			Map<String, Object> doc = pu.getTaskInputV2(eventMap, defaults, workflow, task.getTaskId(), null, null);
 			sendMessage(doc);
 		} catch (Exception ex) {
-			logger.warn("Unable to notify task status " + state.name() + ", failed with " + ex.getMessage(), ex);
+			logger.debug("Unable to notify task status " + state.name() + ", failed with " + ex.getMessage(), ex);
 			throw new RuntimeException(ex.getMessage(), ex);
 		}
 	}
@@ -1557,7 +1576,7 @@ public class WorkflowExecutor {
 			Map<String, Object> doc = pu.getTaskInputV2(eventMap, defaults, workflow, null, null, null);
 			sendMessage(doc);
 		} catch (Exception ex) {
-			logger.warn("Unable to notify workflow status " + state.name() + ", failed with " + ex.getMessage(), ex);
+			logger.debug("Unable to notify workflow status " + state.name() + ", failed with " + ex.getMessage(), ex);
 			throw new RuntimeException(ex.getMessage(), ex);
 		}
 	}
@@ -1575,7 +1594,7 @@ public class WorkflowExecutor {
 		String sink = (String) actionMap.get("sink");
 		ObservableQueue queue = EventQueues.getQueue(sink, false);
 		if (queue == null) {
-			logger.warn("sendMessage. No queue found for " + sink);
+			logger.debug("sendMessage. No queue found for " + sink);
 			return;
 		}
 
@@ -1743,6 +1762,7 @@ public class WorkflowExecutor {
 		try {
 			edao.removeWorkflow(workflowId);
 		} catch (Exception ignore) {
+			logger.debug("WorkflowId  " + workflowId + ", failed with " + ignore.getMessage(), ignore);
 		}
 	}
 
@@ -1831,6 +1851,7 @@ public class WorkflowExecutor {
 		try {
 			rerunWF(workflowId, cancelled, null, null, null, null, null);
 		} catch (Exception e) {
+			logger.debug("workflowId" + workflowId + ", failed in resumeSubWorkflow with " + e.getMessage(), e);
 			e.printStackTrace();
 		}
 	}

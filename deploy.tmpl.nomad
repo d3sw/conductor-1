@@ -76,7 +76,7 @@ job "conductor" {
       }
 
       service {
-        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.<DM_TLD>/ auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}/"]
+        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.${meta.public_tld}/ auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}/"]
         name = "${JOB}-${TASK}"
         port = "http"
 
@@ -173,7 +173,7 @@ job "conductor" {
         workflow_system_task_worker_poll_frequency   = "1000"
         workflow_system_task_worker_queue_size       = "300"
         workflow_system_task_http_unack_timeout      = "300"
-        workflow_sweeper_frequency                   = "500"
+        workflow_sweeper_frequency                   = "1000"
         workflow_sweeper_thread_count                = 50
         workflow_sweeper_batch_sherlock_service      = "sherlock.service.${meta.tld}"
         workflow_sweeper_batch_sherlock_worker_count = 100
@@ -218,15 +218,20 @@ job "conductor" {
       }
 
       service {
-        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.<DM_TLD>/ auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}/", "metrics=${NOMAD_JOB_NAME}"]
+        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.${meta.public_tld}/ auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}/"]
         name = "${JOB}-${TASK}"
         port = "http"
 
         check {
           type     = "http"
-          path     = "/"
+          path     = "/v1/health"
           interval = "10s"
           timeout  = "3s"
+          check_restart {
+            limit           = 3
+            grace           = "180s"
+            ignore_warnings = false
+          }
         }
       }
 
@@ -261,7 +266,7 @@ job "conductor-archiver" {
   datacenters = ["us-west-2"]
 
   periodic {
-    cron             = "@weekly"
+    cron             = "@daily"
     time_zone        = "America/Los_Angeles"
     prohibit_overlap = true
   }

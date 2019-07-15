@@ -32,6 +32,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 
@@ -71,6 +72,23 @@ public class InfoResource {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> status() {
 		return Collections.singletonMap("version", fullVersion);
+	}
+
+	@GET
+	@Path("/health")
+	@ApiOperation(value = "Get the health status")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> health() throws IOException {
+		boolean status = false;
+
+		try {
+			status = metricsDAO.ping();
+		} catch (Exception e) {
+			logger.error("Db health check failed: " + e.getMessage(), e);
+			throw e;
+		}
+
+		return Collections.singletonMap("is_ping_okay", status);
 	}
 
 	@GET

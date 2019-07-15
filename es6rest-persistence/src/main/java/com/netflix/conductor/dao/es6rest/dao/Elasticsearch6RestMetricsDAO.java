@@ -10,6 +10,7 @@ import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.dao.MetricsDAO;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
@@ -112,15 +113,24 @@ public class Elasticsearch6RestMetricsDAO extends Elasticsearch6RestAbstractDAO 
 	private final String taskIndex;
 
 	@Inject
-	public Elasticsearch6RestMetricsDAO(RestHighLevelClient client, Configuration config,
+	public Elasticsearch6RestMetricsDAO(RestClientBuilder builder, Configuration config,
 										ObjectMapper mapper, MetadataDAO metadataDAO) {
-		super(client, config, mapper, "metrics");
+		super(builder, config, mapper, "metrics");
 		this.metadataDAO = metadataDAO;
 		this.workflowIndex = String.format("conductor.runtime.%s.workflow", config.getStack());
 		this.deciderIndex = String.format("conductor.queues.%s._deciderqueue", config.getStack());
 		this.eventExecIndex = String.format("conductor.runtime.%s.event_execution", config.getStack());
 		this.eventPubsIndex = String.format("conductor.runtime.%s.event_published", config.getStack());
 		this.taskIndex = String.format("conductor.runtime.%s.task", config.getStack());
+	}
+
+	@Override
+	public boolean ping() {
+		try (RestHighLevelClient client = new RestHighLevelClient(builder)) {
+			return client.ping();
+		} catch (IOException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
 	}
 
 	@Override
@@ -803,7 +813,7 @@ public class Elasticsearch6RestMetricsDAO extends Elasticsearch6RestAbstractDAO 
 	}
 
 	private SearchResponse search(SearchRequest request) {
-		try {
+		try (RestHighLevelClient client = new RestHighLevelClient(builder)) {
 			return client.search(request);
 		} catch (IOException e) {
 			logger.warn("search failed for " + request + " " + e.getMessage(), e);
