@@ -140,8 +140,8 @@ public class WorkflowExecutor {
 		return startWorkflow(null, name, version, input, correlationId, parentWorkflowId,  parentWorkflowTaskId, event, null, null, null, null, null, null);
 	}
 
-	public String startWorkflow(String name, int version, Map<String, Object> input, String correlationId, String parentWorkflowId, String parentWorkflowTaskId, String event, Map<String, String> taskToDomain, List<String> workflowIds) throws Exception {
-		return startWorkflow(null, name, version, input, correlationId, parentWorkflowId, parentWorkflowTaskId, event, taskToDomain, workflowIds, null, null, null, null);
+	public String startWorkflow(String name, int version, Map<String, Object> input, String correlationId, String parentWorkflowId, String parentWorkflowTaskId, String event, Map<String, String> taskToDomain, List<String> workflowIds, String traceId) throws Exception {
+		return startWorkflow(null, name, version, input, correlationId, parentWorkflowId, parentWorkflowTaskId, event, taskToDomain, workflowIds, null, null, null, traceId);
 	}
 
 	public String startWorkflow(String name, int version, Map<String, Object> input, String correlationId, String parentWorkflowId, String parentWorkflowTaskId, String event, Map<String, String> taskToDomain, List<String> workflowIds, Map<String, Object> authorization, String contextToken, String contextUser, String traceId) throws Exception {
@@ -712,7 +712,9 @@ public class WorkflowExecutor {
 			try {
 
 				WorkflowDef latestCancelWorkflow = metadata.getLatest(cancelWorkflow);
-				String cancelWFId = startWorkflow(cancelWorkflow, latestCancelWorkflow.getVersion(), input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null, null, workflow.getWorkflowIds());
+				String cancelWFId = startWorkflow(cancelWorkflow, latestCancelWorkflow.getVersion(), input,
+					workflow.getCorrelationId(), workflow.getWorkflowId(), null, null, null,
+					workflow.getWorkflowIds(), workflow.getTraceId());
 
 				workflow.getOutput().put("conductor.cancel_workflow", cancelWFId);
 
@@ -875,7 +877,9 @@ public class WorkflowExecutor {
 				input.put("taskRetryCount", failedTask.getRetryCount());
 
 				try {
-					startWorkflow(workflowName, workflowVersion, input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null, null, workflow.getWorkflowIds());
+					startWorkflow(workflowName, workflowVersion, input, workflow.getCorrelationId(),
+						workflow.getWorkflowId(), null, null, null,
+						workflow.getWorkflowIds(), workflow.getTraceId());
 				} catch (Exception e) {
 					logger.debug("Error workflow " + workflowName + " failed to start. reason: " + e.getMessage(), e);
 					Monitors.recordWorkflowStartError(workflowName);
@@ -919,7 +923,9 @@ public class WorkflowExecutor {
 			try {
 
 				WorkflowDef latestFailureWorkflow = metadata.getLatest(failureWorkflow);
-				String failureWFId=startWorkflow(failureWorkflow, latestFailureWorkflow.getVersion(), input, workflow.getCorrelationId(), workflow.getWorkflowId(), null, null,null, workflow.getWorkflowIds());
+				String failureWFId = startWorkflow(failureWorkflow, latestFailureWorkflow.getVersion(), input,
+					workflow.getCorrelationId(), workflow.getWorkflowId(), null, null,null,
+					workflow.getWorkflowIds(), workflow.getTraceId());
 				workflow.getOutput().put("conductor.failure_workflow", failureWFId);
 
 			} catch (Exception e) {
