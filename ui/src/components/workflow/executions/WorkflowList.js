@@ -241,6 +241,13 @@ dateChangeFrom(e){
       totalHits = this.props.data.totalHits;
       found = wfs.length;
     }
+
+      for ( var index = 0; index < wfs.length; index++) {
+             var res = String(wfs[index].correlationId);
+             var replaced=res.replace(/\"/g, "");
+             wfs[index].correlationId = replaced;
+        }
+
     let start = parseInt(this.state.start);
     let max = start + 100;
     if(found < 100) {
@@ -256,6 +263,7 @@ dateChangeFrom(e){
     function linkMaker(cell, row) {
       return <Link to={`/workflow/id/${cell}`}>{cell}</Link>;
     };
+
     function zeroPad(num) {
       return ('0' + num).slice(-2);
     }
@@ -348,7 +356,7 @@ dateChangeFrom(e){
           {parseInt(this.state.start) >= 100?<a onClick={this.prevPage}><i className="fa fa-backward"></i>&nbsp;Previous Page</a>:''}
           {parseInt(this.state.start) + 100 <= totalHits?<a onClick={this.nextPage}>&nbsp;&nbsp;Next Page&nbsp;<i className="fa fa-forward"></i></a>:''}
         </span>
-        <BootstrapTable data={wfs} striped={true} hover={true} search={false} exportCSV={false} pagination={false} options={{sizePerPage:100}}>
+        <BootstrapTable data={wfs} striped={true} hover={true} search={false} exportCSV={true} pagination={false} options={{sizePerPage:100}}>
           <TableHeaderColumn dataField="workflowType" isKey={true} dataAlign="left" dataSort={true}>Workflow</TableHeaderColumn>
           <TableHeaderColumn dataField="workflowId" dataSort={true} dataFormat={linkMaker}>Workflow ID</TableHeaderColumn>
           <TableHeaderColumn dataField="status" dataSort={true}>Status</TableHeaderColumn>
@@ -356,8 +364,9 @@ dateChangeFrom(e){
           <TableHeaderColumn dataField="updateTime" dataSort={true} dataFormat={formatDate}>Last Updated</TableHeaderColumn>
           <TableHeaderColumn dataField="endTime" hidden={false} dataFormat={formatDate}>End Time</TableHeaderColumn>
           <TableHeaderColumn dataField="reasonForIncompletion" hidden={false}>Failure Reason</TableHeaderColumn>
-          <TableHeaderColumn dataField="input" width="300">Input</TableHeaderColumn>
-          <TableHeaderColumn dataField="workflowId" width="300" dataFormat={miniDetails}>&nbsp;</TableHeaderColumn>
+          <TableHeaderColumn dataField="input" width="300"  hidden={true}>Input</TableHeaderColumn>
+          <TableHeaderColumn dataField="workflowId" width="300" dataFormat={miniDetails} hidden={true}>&nbsp;</TableHeaderColumn>
+          <TableHeaderColumn dataField="correlationId">correlationId</TableHeaderColumn>
         </BootstrapTable>
 
         <br/><br/>
