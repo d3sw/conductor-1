@@ -1040,7 +1040,7 @@ public class WorkflowExecutor {
 				break;
 		}
 
-		// Exit if resetStartTime was requested as decoder won't do any actions
+		// Exit if resetStartTime was requested as decider won't do any actions
 		if (result.isResetStartTime()) {
 			return;
 		}
