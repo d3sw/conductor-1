@@ -89,7 +89,6 @@ router.get('/', async (req, res, next) => {
     }
     let query = req.query.q;
     const url = baseURL2 + 'search?size='+ size +'&sort=startTime:DESC&freeText=' + freeText.join(' AND ') + '&start=' + start + '&query=' + query;
-    console.log("url="+url);
     const result = await http.get(url);
     const hits = result.results;
     res.status(200).send({result: {hits:hits, totalHits: result.totalHits}});
