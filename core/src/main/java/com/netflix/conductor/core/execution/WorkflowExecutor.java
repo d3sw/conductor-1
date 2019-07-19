@@ -1001,7 +1001,12 @@ public class WorkflowExecutor {
 			logger.debug(msg);
 			return;
 		}
-		edao.updateTask(task);
+
+		if (result.isResetStartTime()) {
+			edao.resetStartTime(task);
+		} else {
+			edao.updateTask(task);
+		}
 
 		result.getLogs().forEach(tl -> tl.setTaskId(task.getTaskId()));
 		edao.addTaskExecLog(result.getLogs());
@@ -1033,6 +1038,11 @@ public class WorkflowExecutor {
 				break;
 			default:
 				break;
+		}
+
+		// Exit if resetStartTime was requested as decoder won't do any actions
+		if (result.isResetStartTime()) {
+			return;
 		}
 
 		// Who calls decider ? Sweeper or current thread?

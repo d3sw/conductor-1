@@ -218,6 +218,20 @@ public class Elasticsearch6RestExecutionDAO extends Elasticsearch6RestAbstractDA
 	}
 
 	@Override
+	public void resetStartTime(Task task) {
+		String indexName = indexes.get(TASK);
+		String typeName = types.get(TASK);
+		String id = toId(task.getTaskId());
+
+		Map<String, Object> payload = new HashMap<>();
+		payload.put("startTime", task.getStartTime());
+		payload.put("endTime", task.getEndTime());
+		payload.put("outputData", task.getOutputData());
+
+		merge(indexName, typeName, id, payload);
+	}
+
+	@Override
 	public boolean exceedsInProgressLimit(Task task) {
 		if (logger.isDebugEnabled())
 			logger.debug("exceedsInProgressLimit: task={}", toJson(task));
