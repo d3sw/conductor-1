@@ -13,7 +13,8 @@ const Workflow = React.createClass({
   getInitialState() {
    this.state = {
               datefrm: new Date(),
-              dateto:new Date()
+              dateto:new Date(),
+              csv:'false'
           };
     let h = this.props.location.query.h;
     let range = this.props.location.query.range;
@@ -114,11 +115,34 @@ const Workflow = React.createClass({
 
     this.refreshResults();
   },
-  searchBtnClick() {
-    this.state.update = true;
-    this.refreshResults();
-  },
-  refreshResults() {
+
+   async  exportcsv() {
+      this.state.update = true;
+      this.state.csv = 'true';
+      let search = '';
+        if(this.state.search != '') {
+          search = this.state.search;
+        }
+        let query = [];
+
+        if(this.state.workflowTypes.length > 0) {
+          query.push('workflowType IN (' + this.state.workflowTypes.join(',') + ') ');
+        }
+        if(this.state.status.length > 0) {
+          query.push('status IN (' + this.state.status.join(',') + ') ');
+        }
+       this.props.dispatch(searchWorkflows(query.join(' AND '), search, this.state.h, this.state.fullstr, this.state.start, this.state.range,this.state.datefrm,this.state.dateto,this.state.csv))
+       .then(() => {
+        this.table.handleExportCSV()
+        this.state.csv = ''
+       })
+    },
+
+    searchBtnClick() {
+        this.state.update = true;
+        this.refreshResults();
+      },
+    refreshResults() {
     if(this.state.update) {
       this.state.update = false;
       this.urlUpdate();
@@ -135,7 +159,8 @@ const Workflow = React.createClass({
     let range = this.state.range;
     let frmdate = this.state.datefrm;
     let todate = this.state.dateto;
-    this.props.history.pushState(null, "/workflow?q=" + q + "&h=" + h + "&workflowTypes=" + workflowTypes + "&status=" + status + "&start=" + start + "&range=" + range+"&frmdate="+frmdate+"todate="+todate);
+    let csv = this.state.csv;
+    this.props.history.pushState(null, "/workflow?q=" + q + "&h=" + h + "&workflowTypes=" + workflowTypes + "&status=" + status + "&start=" + start + "&range=" + range+"&frmdate="+frmdate+"&todate="+todate+"&csv="+csv);
   },
   doDispatch() {
 
@@ -151,7 +176,8 @@ const Workflow = React.createClass({
     if(this.state.status.length > 0) {
       query.push('status IN (' + this.state.status.join(',') + ') ');
     }
-    this.props.dispatch(searchWorkflows(query.join(' AND '), search, this.state.h, this.state.fullstr, this.state.start, this.state.range,this.state.datefrm,this.state.dateto));
+   this.props.dispatch(searchWorkflows(query.join(' AND '), search, this.state.h, this.state.fullstr, this.state.start, this.state.range,this.state.datefrm,this.state.dateto,this.state.csv))
+
   },
   workflowTypeChange(workflowTypes) {
     this.state.update = true;
@@ -241,7 +267,6 @@ dateChangeFrom(e){
       totalHits = this.props.data.totalHits;
       found = wfs.length;
     }
-
       for ( var index = 0; index < wfs.length; index++) {
              var res = String(wfs[index].correlationId);
              var replaced=res.replace(/\"/g, "");
@@ -343,6 +368,7 @@ dateChangeFrom(e){
                   </Col>
                     <Col md={2}>
                          <Button bsSize="small" bsStyle="success" onClick={this.clearBtnClick}>&nbsp;&nbsp;Clear date range</Button>
+
                      </Col>
              </Row>
           </Grid>
@@ -356,7 +382,8 @@ dateChangeFrom(e){
           {parseInt(this.state.start) >= 100?<a onClick={this.prevPage}><i className="fa fa-backward"></i>&nbsp;Previous Page</a>:''}
           {parseInt(this.state.start) + 100 <= totalHits?<a onClick={this.nextPage}>&nbsp;&nbsp;Next Page&nbsp;<i className="fa fa-forward"></i></a>:''}
         </span>
-        <BootstrapTable data={wfs} striped={true} hover={true} search={false} exportCSV={true} pagination={false} options={{sizePerPage:100}}>
+          <Button bsSize="small" bsStyle="success" onClick={this.exportcsv}>Download CSV</Button>
+        <BootstrapTable ref={node => this.table = node} data={wfs} striped={true} hover={true} search={false}  pagination={false} options={{sizePerPage:100}}>
           <TableHeaderColumn dataField="workflowType" isKey={true} dataAlign="left" dataSort={true}>Workflow</TableHeaderColumn>
           <TableHeaderColumn dataField="workflowId" dataSort={true} dataFormat={linkMaker}>Workflow ID</TableHeaderColumn>
           <TableHeaderColumn dataField="status" dataSort={true}>Status</TableHeaderColumn>

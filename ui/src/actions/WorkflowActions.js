@@ -1,6 +1,6 @@
 import http from '../core/HttpClient';
 
-export function searchWorkflows(query, search, hours, fullstr, start, range,frmdate,todate) {
+export function searchWorkflows(query, search, hours, fullstr, start, range,frmdate,todate,csv) {
 
   return function (dispatch) {
     dispatch({
@@ -18,7 +18,7 @@ export function searchWorkflows(query, search, hours, fullstr, start, range,frmd
       }
     }
 
-    return http.get('/api/wfe/' + status + '?q=' + query + '&h=' + hours + '&freeText=' + search + '&start=' + start + "&range=" + range+"&frmdate="+frmdate+"&todate="+todate).then((data) => {
+    return http.get('/api/wfe/' + status + '?q=' + query + '&h=' + hours + '&freeText=' + search + '&start=' + start + "&range=" + range+"&frmdate="+frmdate+"&todate="+todate+"&csv="+csv).then((data) => {
       dispatch({
         type: 'RECEIVED_WORKFLOWS',
         data
