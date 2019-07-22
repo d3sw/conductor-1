@@ -7,6 +7,7 @@ import { searchWorkflows, getWorkflowDefs } from '../../../actions/WorkflowActio
 import WorkflowAction  from './WorkflowAction';
 import Typeahead from 'react-bootstrap-typeahead';
 import Select from 'react-select';
+import moment from 'moment';
 const ILLEGAL_SEARCH_CHARACTERS = /#|"|%|&|\\/;
 const Workflow = React.createClass({
 
@@ -260,6 +261,9 @@ dateChangeFrom(e){
   },
  render() {
     let wfs = [];
+    //var dateTime = new Date("2015-06-17 14:24:36");
+   // dateTime = moment(dateTime).format("YYYY-MM-DD HH:mm:ss");
+let dateTime = moment().format(moment.HTML5_FMT.DATETIME_LOCAL_SECONDS);
     let totalHits = 0;
     let found = 0;
     if(this.props.data.hits) {
@@ -383,7 +387,7 @@ dateChangeFrom(e){
           {parseInt(this.state.start) + 100 <= totalHits?<a onClick={this.nextPage}>&nbsp;&nbsp;Next Page&nbsp;<i className="fa fa-forward"></i></a>:''}
         </span>
           <Button bsSize="small" bsStyle="success" onClick={this.exportcsv}>Download CSV</Button>
-        <BootstrapTable ref={node => this.table = node} data={wfs} striped={true} hover={true} search={false}  pagination={false} options={{sizePerPage:100}}>
+        <BootstrapTable ref={node => this.table = node} data={wfs} striped={true} hover={true} search={false} csvFileName={"conductorReport_"+dateTime+".csv"}  pagination={false} options={{sizePerPage:100}}>
           <TableHeaderColumn dataField="workflowType" isKey={true} dataAlign="left" dataSort={true}>Workflow</TableHeaderColumn>
           <TableHeaderColumn dataField="workflowId" dataSort={true} dataFormat={linkMaker}>Workflow ID</TableHeaderColumn>
           <TableHeaderColumn dataField="status" dataSort={true}>Status</TableHeaderColumn>
