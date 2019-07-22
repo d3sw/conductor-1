@@ -1003,7 +1003,7 @@ public class WorkflowExecutor {
 		}
 
 		if (result.isResetStartTime()) {
-			edao.resetStartTime(task);
+			edao.resetStartTime(task, result.isUpdateOutput());
 		} else {
 			edao.updateTask(task);
 		}

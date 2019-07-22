@@ -218,7 +218,7 @@ public class Elasticsearch6RestExecutionDAO extends Elasticsearch6RestAbstractDA
 	}
 
 	@Override
-	public void resetStartTime(Task task) {
+	public void resetStartTime(Task task, boolean updateOutput) {
 		String indexName = indexes.get(TASK);
 		String typeName = types.get(TASK);
 		String id = toId(task.getTaskId());
@@ -226,7 +226,9 @@ public class Elasticsearch6RestExecutionDAO extends Elasticsearch6RestAbstractDA
 		Map<String, Object> payload = new HashMap<>();
 		payload.put("startTime", task.getStartTime());
 		payload.put("endTime", task.getEndTime());
-		payload.put("outputData", task.getOutputData());
+		if (updateOutput) {
+			payload.put("outputData", task.getOutputData());
+		}
 
 		merge(indexName, typeName, id, payload);
 	}

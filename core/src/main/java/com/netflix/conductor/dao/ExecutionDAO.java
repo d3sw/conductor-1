@@ -296,5 +296,5 @@ public interface ExecutionDAO {
 
 	public default void addEventPublished(EventPublished ep) {}
 
-	public default void resetStartTime(Task task) {}
+	public default void resetStartTime(Task task, boolean updateOutput) {}
 }

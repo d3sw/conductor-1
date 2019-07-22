@@ -415,11 +415,13 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 	}
 
 	@Override
-	public void resetStartTime(Task task) {
+	public void resetStartTime(Task task, boolean updateOutput) {
 		Map<String, Object> payload = new HashMap<>();
 		payload.put("startTime", task.getStartTime());
 		payload.put("endTime", task.getEndTime());
-		payload.put("outputData", task.getOutputData());
+		if (updateOutput) {
+			payload.put("outputData", task.getOutputData());
+		}
 
 		String SQL = "UPDATE task SET json_data = (json_data::jsonb || ?::jsonb)::text WHERE task_id = ?";
 		executeWithTransaction(SQL, q -> q
