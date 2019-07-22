@@ -261,9 +261,7 @@ dateChangeFrom(e){
   },
  render() {
     let wfs = [];
-    //var dateTime = new Date("2015-06-17 14:24:36");
-   // dateTime = moment(dateTime).format("YYYY-MM-DD HH:mm:ss");
-let dateTime = moment().format(moment.HTML5_FMT.DATETIME_LOCAL_SECONDS);
+    let dateTime = moment().format(moment.HTML5_FMT.DATETIME_LOCAL_SECONDS);
     let totalHits = 0;
     let found = 0;
     if(this.props.data.hits) {

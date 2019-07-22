@@ -85,7 +85,7 @@ router.get('/', async (req, res, next) => {
     let size=100;
     if(csv=='true')
     {
-    size=1000
+    size=10000
     }
     let query = req.query.q;
     const url = baseURL2 + 'search?size='+ size +'&sort=startTime:DESC&freeText=' + freeText.join(' AND ') + '&start=' + start + '&query=' + query;

@@ -79,7 +79,7 @@ public class WorkflowResource {
 		this.executor = executor;
 		this.service = service;
 		this.metadata = metadata;
-		this.maxSearchSize = config.getIntProperty("workflow.max.search.size", 5_000);
+		this.maxSearchSize = config.getIntProperty("workflow.max.search.size", 10_000);
 	}
 
 	private String handleCorrelationId(String workflowId, HttpHeaders headers,
