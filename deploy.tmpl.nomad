@@ -161,7 +161,8 @@ job "conductor" {
         APP_VERSION = "[[.app_version]]"
 
         // Database settings
-        db = "elasticsearch"
+        workflow_elasticsearch_mode = "none"
+        db = "aurora"
 
         // Workflow settings
         workflow_failure_expandInline                = "false"
@@ -181,11 +182,6 @@ job "conductor" {
         workflow_batch_sherlock_enabled              = "true"
         workflow_lazy_decider                        = "true"
 
-        // Elasticsearch settings.
-        workflow_elasticsearch_mode                  = "elasticsearch"
-        workflow_elasticsearch_initial_sleep_seconds = "0"
-        workflow_elasticsearch_stale_period_seconds  = "300"
-
         // Auth settings. Rest settings are in vault
         conductor_auth_service  = "auth.service.${meta.tld}"
         conductor_auth_endpoint = "/v1/tenant/deluxe/auth/token"
@@ -198,14 +194,8 @@ job "conductor" {
         io_shotgun_manualAck      = "true"
         com_bydeluxe_onemq_log    = "false"
 
-        // NATS settings
-        io_nats_streaming_url            = "nats://nats.service.${meta.tld}:4222"
-        io_nats_streaming_clusterId      = "events-streaming"
-        io_nats_streaming_durableName    = "conductor-server-${meta.tld}"
-        io_nats_streaming_publishRetryIn = "5,10,15"
-
         // Additional nats & asset modules
-        conductor_additional_modules = "com.netflix.conductor.contribs.NatsStreamModule,com.netflix.conductor.contribs.ShotgunModule"
+        conductor_additional_modules = "com.netflix.conductor.contribs.ShotgunModule"
 
         // Exclude demo workflows
         loadSample = "false"
