@@ -194,7 +194,7 @@ job "conductor" {
         io_shotgun_manualAck      = "true"
         com_bydeluxe_onemq_log    = "false"
 
-        // Additional nats & asset modules
+        // Additional modules
         conductor_additional_modules = "com.netflix.conductor.contribs.ShotgunModule"
 
         // Exclude demo workflows
