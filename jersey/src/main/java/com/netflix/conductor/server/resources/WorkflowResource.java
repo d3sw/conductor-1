@@ -25,6 +25,7 @@ import com.netflix.conductor.common.metadata.workflow.StartWorkflowRequest;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
 import com.netflix.conductor.common.run.CommonParams;
 import com.netflix.conductor.common.run.SearchResult;
+import com.netflix.conductor.common.run.Error;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.WorkflowSummary;
 import com.netflix.conductor.contribs.correlation.Correlator;
@@ -39,6 +40,8 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponses;
+import io.swagger.annotations.ApiResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.NDC;
 import org.slf4j.Logger;
@@ -138,6 +141,14 @@ public class WorkflowResource {
 	@Path("/{name}")
 	@Produces({MediaType.TEXT_PLAIN})
 	@ApiOperation("Start a new workflow.  Returns the ID of the workflow instance that can be later used for tracking")
+	@ApiResponses(value = {
+			@ApiResponse(code = 404, message = "NOT_FOUND", response = Error.class),
+			@ApiResponse(code = 400, message = "INVALID_INPUT", response = Error.class),
+			@ApiResponse(code = 409, message = "CONFLICT", response = Error.class),
+			@ApiResponse(code = 500, message = "INTERNAL_ERROR", response = Error.class),
+			@ApiResponse(code = 401, message = "UNAUTHORIZED", response = Error.class),
+			@ApiResponse(code = 501, message = "NOT_IMPLEMENTED", response = Error.class),
+			@ApiResponse(code = 200, message = "workflow started", response = String.class)})
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header")})
 	public Response startWorkflow(@Context HttpHeaders headers,
 								  @PathParam("name") String name, @QueryParam("version") Integer version,
