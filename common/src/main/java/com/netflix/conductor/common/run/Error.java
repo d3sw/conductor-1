@@ -20,10 +20,7 @@ package com.netflix.conductor.common.run;
 
 import java.util.*;
 
-/**
- * @author Viren
- * Defines an event handler
- */
+
 public class Error {
 
 	private String code;
