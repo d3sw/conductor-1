@@ -51,6 +51,7 @@ public class CoreModule extends AbstractModule {
 		bind(BatchSweeper.class).asEagerSingleton();
 		bind(Batch.class).asEagerSingleton();
 		bind(Terminate.class).asEagerSingleton();
+		bind(Lambda.class).asEagerSingleton();
 	}
 	
 }

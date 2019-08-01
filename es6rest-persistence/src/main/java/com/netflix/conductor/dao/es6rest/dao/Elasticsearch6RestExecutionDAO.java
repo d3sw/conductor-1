@@ -36,7 +36,7 @@ import com.netflix.conductor.metrics.Monitors;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.index.query.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,8 +75,8 @@ public class Elasticsearch6RestExecutionDAO extends Elasticsearch6RestAbstractDA
 	private IndexDAO indexer;
 
 	@Inject
-	public Elasticsearch6RestExecutionDAO(RestHighLevelClient client, Configuration config, ObjectMapper mapper, IndexDAO indexer, MetadataDAO metadata) {
-		super(client, config, mapper, "runtime");
+	public Elasticsearch6RestExecutionDAO(RestClientBuilder builder, Configuration config, ObjectMapper mapper, IndexDAO indexer, MetadataDAO metadata) {
+		super(builder, config, mapper, "runtime");
 		this.indexer = indexer;
 		this.metadata = metadata;
 
@@ -215,6 +215,22 @@ public class Elasticsearch6RestExecutionDAO extends Elasticsearch6RestAbstractDA
 		}
 
 		indexer.index(task);
+	}
+
+	@Override
+	public void resetStartTime(Task task, boolean updateOutput) {
+		String indexName = indexes.get(TASK);
+		String typeName = types.get(TASK);
+		String id = toId(task.getTaskId());
+
+		Map<String, Object> payload = new HashMap<>();
+		payload.put("startTime", task.getStartTime());
+		payload.put("endTime", task.getEndTime());
+		if (updateOutput) {
+			payload.put("outputData", task.getOutputData());
+		}
+
+		merge(indexName, typeName, id, payload);
 	}
 
 	@Override
