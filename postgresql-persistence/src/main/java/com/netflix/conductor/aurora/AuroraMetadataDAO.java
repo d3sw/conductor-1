@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class AuroraMetadataDAO extends AuroraBaseDAO implements MetadataDAO {
-	private static final String PROP_CACHE_REFRESH = "conductor.cache.metadata.refresh.time.seconds";
+	private static final String PROP_CACHE_REFRESH = "conductor.metadata.cache.refresh.seconds";
 	private final ConcurrentHashMap<String, WorkflowDef> workflowDefCache = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, TaskDef> taskDefCache = new ConcurrentHashMap<>();
 
