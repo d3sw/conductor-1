@@ -19,17 +19,18 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class AuroraMetadataDAO extends AuroraBaseDAO implements MetadataDAO {
-	private static final String PROP_TASKDEF_CACHE_REFRESH = "conductor.taskdef.cache.refresh.time.seconds";
-	private static final int DEFAULT_TASKDEF_CACHE_REFRESH_SECONDS = 60;
+	private static final String PROP_CACHE_REFRESH = "conductor.cache.metadata.refresh.time.seconds";
+	private final ConcurrentHashMap<String, WorkflowDef> workflowDefCache = new ConcurrentHashMap<>();
 	private final ConcurrentHashMap<String, TaskDef> taskDefCache = new ConcurrentHashMap<>();
 
 	@Inject
 	public AuroraMetadataDAO(DataSource dataSource, ObjectMapper mapper, Configuration config) {
 		super(dataSource, mapper);
 
-		int cacheRefreshTime = config.getIntProperty(PROP_TASKDEF_CACHE_REFRESH, DEFAULT_TASKDEF_CACHE_REFRESH_SECONDS);
+		refreshCache();
+		int cacheRefreshTime = config.getIntProperty(PROP_CACHE_REFRESH, 60);
 		Executors.newSingleThreadScheduledExecutor()
-			.scheduleWithFixedDelay(this::refreshTaskDefs, cacheRefreshTime, cacheRefreshTime, TimeUnit.SECONDS);
+			.scheduleWithFixedDelay(this::refreshCache, cacheRefreshTime, cacheRefreshTime, TimeUnit.SECONDS);
 	}
 
 	@Override
@@ -52,15 +53,7 @@ public class AuroraMetadataDAO extends AuroraBaseDAO implements MetadataDAO {
 	@Override
 	public TaskDef getTaskDef(String name) {
 		Preconditions.checkNotNull(name, "TaskDef name cannot be null");
-		TaskDef taskDef = taskDefCache.get(name);
-		if (taskDef == null) {
-			if (logger.isTraceEnabled()) {
-				logger.trace("Cache miss: {}", name);
-			}
-			taskDef = getTaskDefFromDB(name);
-		}
-
-		return taskDef;
+		return taskDefCache.get(name);
 	}
 
 	@Override
@@ -131,6 +124,13 @@ public class AuroraMetadataDAO extends AuroraBaseDAO implements MetadataDAO {
 
 	@Override
 	public WorkflowDef get(String name, int version) {
+		Preconditions.checkNotNull(name, "WorkflowDef name cannot be null");
+		WorkflowDef workflowDef = workflowDefCache.get(name + "." + version);
+		if (workflowDef != null) {
+			return workflowDef;
+		}
+
+		logger.warn("No WorkflowDef in the cache for " + name + "." + version);
 		final String SQL = "SELECT json_data FROM meta_workflow_def WHERE NAME = ? AND version = ?";
 		return queryWithTransaction(SQL, q -> q.addParameter(name)
 			.addParameter(version)
@@ -288,8 +288,6 @@ public class AuroraMetadataDAO extends AuroraBaseDAO implements MetadataDAO {
 						insert -> insert.addParameter(taskDef.getName()).addJsonParameter(taskDef).executeUpdate());
 				}
 			});
-
-			taskDefCache.put(taskDef.getName(), taskDef);
 			return taskDef.getName();
 		});
 	}
@@ -301,23 +299,36 @@ public class AuroraMetadataDAO extends AuroraBaseDAO implements MetadataDAO {
 		return query(tx, SQL, q -> q.executeAndFetch(TaskDef.class));
 	}
 
-	private void refreshTaskDefs() {
+	private void refreshCache() {
 		try {
-			withTransaction(tx -> {
-				Map<String, TaskDef> map = new HashMap<>();
-				findAllTaskDefs(tx).forEach(taskDef -> map.put(taskDef.getName(), taskDef));
+			Map<String, TaskDef> map = new HashMap<>();
+			getAllTaskDefs().forEach(taskDef -> map.put(taskDef.getName(), taskDef));
+			synchronized (taskDefCache) {
+				taskDefCache.clear();
+				taskDefCache.putAll(map);
+			}
 
-				synchronized (taskDefCache) {
-					taskDefCache.clear();
-					taskDefCache.putAll(map);
-				}
-
-				if (logger.isTraceEnabled()) {
-					logger.trace("Refreshed {} TaskDefs", taskDefCache.size());
-				}
-			});
+			if (logger.isTraceEnabled()) {
+				logger.trace("Refreshed {} TaskDefs", taskDefCache.size());
+			}
 		} catch (Exception e) {
 			logger.error("refresh TaskDefs failed ", e);
+		}
+
+		try {
+			Map<String, WorkflowDef> map = new HashMap<>();
+			getAll().forEach(workflowDef -> map.put(workflowDef.getName() + "." + workflowDef.getVersion(), workflowDef));
+
+			synchronized (workflowDefCache) {
+				workflowDefCache.clear();
+				workflowDefCache.putAll(map);
+			}
+
+			if (logger.isTraceEnabled()) {
+				logger.trace("Refreshed {} WorkflowDefs", workflowDefCache.size());
+			}
+		} catch (Exception e) {
+			logger.error("refresh WorkflowDefs failed ", e);
 		}
 	}
 
