@@ -155,9 +155,6 @@ public class BatchSweeper {
                 // If so - reschedule entire group in unackTimeout period
                 tasks.forEach(task -> queues.setUnackTimeout(queueName, task.getTaskId(), unackTimeout));
             } else {
-                SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-                System.out.println("***" + format.format(new Date()) + " - Execute " + carried.getTaskId() + "/" + carried.getWorkflowInstanceId());
-
                 // Allow executing the entire group
                 tasks.forEach(task -> {
 
