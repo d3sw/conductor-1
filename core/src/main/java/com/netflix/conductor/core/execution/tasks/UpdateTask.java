@@ -61,17 +61,20 @@ public class UpdateTask extends WorkflowSystemTask {
 			task.setReasonForIncompletion("Missing '" + STATUS_PARAMETER + "' in input parameters");
 			task.setStatus(Status.FAILED);
 			return;
-		} else if (!status.equals(Status.COMPLETED.name())
+		}
+		if (!status.equals(Status.COMPLETED.name())
 				&& !status.equals(Status.FAILED.name())
 				&& !status.equals(Status.IN_PROGRESS.name())) {
 			task.setReasonForIncompletion("Invalid '" + STATUS_PARAMETER + "' value. Allowed COMPLETED/FAILED/IN_PROGRESS only");
 			task.setStatus(Status.FAILED);
 			return;
-		} else if (StringUtils.isEmpty(workflowId)) {
+		}
+		if (StringUtils.isEmpty(workflowId)) {
 			task.setReasonForIncompletion("Missing '" + WORKFLOW_ID_PARAMETER + "' in input parameters");
 			task.setStatus(Status.FAILED);
 			return;
-		} else if (StringUtils.isEmpty(taskRefName)) {
+		}
+		if (StringUtils.isEmpty(taskRefName)) {
 			task.setReasonForIncompletion("Missing '" + TASKREF_NAME_PARAMETER + "' in input parameters");
 			task.setStatus(Status.FAILED);
 			return;
