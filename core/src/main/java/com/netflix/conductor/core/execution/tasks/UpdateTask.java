@@ -107,8 +107,8 @@ public class UpdateTask extends WorkflowSystemTask {
 			executor.updateTask(taskResult);
 		} catch (Exception e) {
 			task.setStatus(Status.FAILED);
-			logger.error("Unable to update task: " + e.getMessage(), e);
 			task.setReasonForIncompletion("Unable to update task: " + e.getMessage());
+			logger.error("Unable to update task: " + e.getMessage(), e);
 		}
 	}
 
