@@ -14,6 +14,7 @@ import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.IndexDAO;
 import com.netflix.conductor.dao.MetadataDAO;
+import org.apache.commons.lang.StringUtils;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
@@ -256,9 +257,13 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 	@Override
 	public Workflow.WorkflowStatus getWorkflowStatus(String workflowId) {
 		String GET_TASK = "SELECT workflow_status FROM workflow WHERE workflow_id = ?";
-		return queryWithTransaction(GET_TASK, q -> q
+		String status = queryWithTransaction(GET_TASK, q -> q
 			.addParameter(workflowId)
-			.executeAndFetchFirst(Workflow.WorkflowStatus.class));
+			.executeScalar(String.class));
+		if (StringUtils.isEmpty(status))
+			return null;
+
+		return Workflow.WorkflowStatus.valueOf(status);
 	}
 
 	@Override
