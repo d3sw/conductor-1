@@ -27,6 +27,7 @@ import com.netflix.conductor.common.run.SearchResult;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.WorkflowSummary;
 import com.netflix.conductor.core.WorkflowContext;
+import com.netflix.conductor.core.events.EventProcessor;
 import com.netflix.conductor.core.execution.ApplicationException;
 import com.netflix.conductor.core.execution.ApplicationException.Code;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
@@ -261,6 +262,32 @@ public class MetadataService {
 	 */
 	public List<EventHandler> getEventHandlersForEvent(String event, boolean activeOnly) {
 		return metadata.getEventHandlersForEvent(event, activeOnly);
+	}
+
+	/**
+	 *  Disables the event handler name
+	 * @param name Handler name
+	 */
+	public void disableEventHandler(String name) {
+		EventHandler handler = getEventHandler(name);
+		if (handler == null) {
+			throw new ApplicationException(ApplicationException.Code.NOT_FOUND, "EventHandler with name " + name + " not found!");
+		}
+		handler.setActive(false);
+		metadata.updateEventHandler(handler);
+	}
+
+	/**
+	 *  Enables the event handler name
+	 * @param name Handler name
+	 */
+	public void enableEventHandler(String name) {
+		EventHandler handler = getEventHandler(name);
+		if (handler == null) {
+			throw new ApplicationException(ApplicationException.Code.NOT_FOUND, "EventHandler with name " + name + " not found!");
+		}
+		handler.setActive(true);
+		metadata.updateEventHandler(handler);
 	}
 
 	/**
