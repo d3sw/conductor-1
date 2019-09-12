@@ -1,12 +1,12 @@
 /**
  * Copyright 2016 Netflix, Inc.
- *
+ * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /**
- * 
+ *
  */
 package com.netflix.conductor.core.execution.tasks;
 
@@ -47,7 +47,7 @@ public class UpdateTask extends WorkflowSystemTask {
 	public UpdateTask() {
 		super(NAME);
 	}
-	
+
 	@Override
 	@SuppressWarnings("unchecked")
 	public void start(Workflow workflow, Task task, WorkflowExecutor executor) throws Exception {
@@ -63,8 +63,8 @@ public class UpdateTask extends WorkflowSystemTask {
 			return;
 		}
 		if (!status.equals(Status.COMPLETED.name())
-				&& !status.equals(Status.FAILED.name())
-				&& !status.equals(Status.IN_PROGRESS.name())) {
+			&& !status.equals(Status.FAILED.name())
+			&& !status.equals(Status.IN_PROGRESS.name())) {
 			task.setReasonForIncompletion("Invalid '" + STATUS_PARAMETER + "' value. Allowed COMPLETED/FAILED/IN_PROGRESS only");
 			task.setStatus(Status.FAILED);
 			return;
@@ -118,9 +118,9 @@ public class UpdateTask extends WorkflowSystemTask {
 	private boolean getResetStartTime(Task task) {
 		Object obj = task.getInputData().get(RESET_PARAMETER);
 		if (obj instanceof Boolean) {
-			return (boolean)obj;
+			return (boolean) obj;
 		} else if (obj instanceof String) {
-			return Boolean.parseBoolean((String)obj);
+			return Boolean.parseBoolean((String) obj);
 		}
 		return false;
 	}
@@ -134,7 +134,7 @@ public class UpdateTask extends WorkflowSystemTask {
 			return null;
 		}
 		if (obj instanceof String) {
-			return (String)obj;
+			return (String) obj;
 		}
 		return obj.toString();
 	}
