@@ -27,7 +27,6 @@ import com.netflix.conductor.common.run.SearchResult;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.WorkflowSummary;
 import com.netflix.conductor.core.WorkflowContext;
-import com.netflix.conductor.core.events.EventProcessor;
 import com.netflix.conductor.core.execution.ApplicationException;
 import com.netflix.conductor.core.execution.ApplicationException.Code;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
@@ -265,7 +264,7 @@ public class MetadataService {
 	}
 
 	/**
-	 *  Disables the event handler name
+	 *  Disables event handler
 	 * @param name Handler name
 	 */
 	public void disableEventHandler(String name) {
@@ -278,7 +277,7 @@ public class MetadataService {
 	}
 
 	/**
-	 *  Enables the event handler name
+	 *  Enables event handler
 	 * @param name Handler name
 	 */
 	public void enableEventHandler(String name) {
