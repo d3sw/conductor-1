@@ -84,14 +84,14 @@ public class UpdateTask extends WorkflowSystemTask {
 				output = new HashMap<>();
 			}
 
-			Workflow targetWorkflow = executor.getWorkflow(workflowId, true);
+			Workflow targetWorkflow = executor.getWorkflow(workflowId, false);
 			if (targetWorkflow == null) {
 				task.setReasonForIncompletion("No workflow found with id " + workflowId);
 				task.setStatus(Status.FAILED);
 				return;
 			}
 
-			Task targetTask = targetWorkflow.getTaskByRefName(taskRefName);
+			Task targetTask = executor.getTask(workflowId, taskRefName);
 			if (targetTask == null) {
 				task.setReasonForIncompletion("No task found with reference name " + taskRefName + ", workflowId " + workflowId);
 				task.setStatus(Status.FAILED);
