@@ -51,7 +51,9 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 				return;
 			}
 
-			task.getOutputData().put("status", status);
+			task.getOutputData().put("name", status.name());
+			task.getOutputData().put("isTerminal", status.isTerminal());
+			task.getOutputData().put("isSuccessful", status.isSuccessful());
 			task.setStatus(Task.Status.COMPLETED);
 		} catch (Exception e) {
 			task.setStatus(Task.Status.FAILED);
