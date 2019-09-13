@@ -14,7 +14,6 @@ import com.netflix.conductor.core.events.queue.Message;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.IndexDAO;
 import com.netflix.conductor.dao.MetadataDAO;
-import org.apache.commons.lang.StringUtils;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
