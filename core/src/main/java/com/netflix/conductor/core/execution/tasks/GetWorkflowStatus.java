@@ -54,5 +54,4 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 			logger.error(e.getMessage(), e);
 		}
 	}
-
 }
