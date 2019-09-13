@@ -48,11 +48,11 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 			if (status == null) {
 				task.setStatus(Task.Status.FAILED);
 				task.setReasonForIncompletion("No workflow found with id " + workflowId);
+				return;
 			}
 
 			task.getOutputData().put("status", status);
 			task.setStatus(Task.Status.COMPLETED);
-
 		} catch (Exception e) {
 			task.setStatus(Task.Status.FAILED);
 			task.setReasonForIncompletion(e.getMessage());
