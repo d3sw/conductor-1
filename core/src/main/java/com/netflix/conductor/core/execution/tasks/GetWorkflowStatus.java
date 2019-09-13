@@ -45,6 +45,11 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 
 			ExecutionDAO executionDao = executor.getExecutionDao();
 			Workflow.WorkflowStatus status = executionDao.getWorkflowStatus(workflowId);
+			if (status == null) {
+				task.setStatus(Task.Status.FAILED);
+				task.setReasonForIncompletion("No workflow found with id " + workflowId);
+			}
+
 			task.getOutputData().put("status", status);
 			task.setStatus(Task.Status.COMPLETED);
 
