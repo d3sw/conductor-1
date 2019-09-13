@@ -44,12 +44,16 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 				throw new IllegalArgumentException("No workflowId provided in parameters");
 
 			ExecutionDAO executionDao = executor.getExecutionDao();
-			Workflow.WorkflowStatus status = executionDao.getWorkflowStatus(workflowId);
-			if (status == null) {
+			Workflow targetWorkflow = executionDao.getWorkflow(workflowId, false);
+			if (targetWorkflow == null) {
 				task.setStatus(Task.Status.FAILED);
 				task.setReasonForIncompletion("No workflow found with id " + workflowId);
 				return;
 			}
+
+			Workflow.WorkflowStatus status = targetWorkflow.getStatus();
+			if (status == null)
+				throw new IllegalArgumentException("No status in workflow " + workflowId);
 
 			task.getOutputData().put("name", status.name());
 			task.getOutputData().put("isTerminal", status.isTerminal());

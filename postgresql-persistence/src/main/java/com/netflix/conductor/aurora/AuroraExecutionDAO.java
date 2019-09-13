@@ -255,18 +255,6 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 	}
 
 	@Override
-	public Workflow.WorkflowStatus getWorkflowStatus(String workflowId) {
-		String GET_STATUS = "SELECT workflow_status FROM workflow WHERE workflow_id = ?";
-		String status = queryWithTransaction(GET_STATUS, q -> q
-			.addParameter(workflowId)
-			.executeScalar(String.class));
-		if (StringUtils.isEmpty(status))
-			return null;
-
-		return Workflow.WorkflowStatus.valueOf(status);
-	}
-
-	@Override
 	public List<Task> getTasks(List<String> taskIds) {
 		if (taskIds == null || taskIds.isEmpty()) {
 			return Lists.newArrayList();
