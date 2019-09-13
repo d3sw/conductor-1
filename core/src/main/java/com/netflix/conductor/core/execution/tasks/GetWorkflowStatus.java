@@ -38,18 +38,15 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 
 	@Override
 	public void start(Workflow workflow, Task task, WorkflowExecutor executor) throws Exception {
+		ExecutionDAO edao = executor.getExecutionDao();
 		try {
 			String workflowId = (String)task.getInputData().get("workflowId");
 			if (StringUtils.isEmpty(workflowId))
 				throw new IllegalArgumentException("No workflowId provided in parameters");
 
-			ExecutionDAO executionDao = executor.getExecutionDao();
-			Workflow targetWorkflow = executionDao.getWorkflow(workflowId, false);
-			if (targetWorkflow == null) {
-				task.setStatus(Task.Status.FAILED);
-				task.setReasonForIncompletion("No workflow found with id " + workflowId);
-				return;
-			}
+			Workflow targetWorkflow = edao.getWorkflow(workflowId, false);
+			if (targetWorkflow == null)
+				throw new IllegalArgumentException("No workflow found with id " + workflowId);
 
 			Workflow.WorkflowStatus status = targetWorkflow.getStatus();
 			if (status == null)
@@ -62,7 +59,7 @@ public class GetWorkflowStatus extends WorkflowSystemTask {
 		} catch (Exception e) {
 			task.setStatus(Task.Status.FAILED);
 			task.setReasonForIncompletion(e.getMessage());
-			logger.error(e.getMessage(), e);
+			logger.debug(e.getMessage(), e);
 		}
 	}
 }
