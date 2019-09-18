@@ -218,7 +218,7 @@ job "conductor" {
 
         check {
           type     = "http"
-          path     = "/v1/health"
+          path     = "/"
           interval = "10s"
           timeout  = "3s"
           check_restart {
