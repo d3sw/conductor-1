@@ -82,7 +82,7 @@ job "conductor" {
 
         check {
           type     = "http"
-          path     = "/"
+          path     = "/v1/status"
           interval = "10s"
           timeout  = "3s"
         }
