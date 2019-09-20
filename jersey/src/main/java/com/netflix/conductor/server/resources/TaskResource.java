@@ -21,6 +21,7 @@ import com.netflix.conductor.common.metadata.tasks.TaskExecLog;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.service.ExecutionService;
+import datadog.trace.api.Trace;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.log4j.NDC;
@@ -56,8 +57,9 @@ public class TaskResource {
 
 	@GET
 	@Path("/poll/{tasktype}")
-	@ApiOperation("Poll for a task of a certain type")
 	@Consumes({ MediaType.WILDCARD })
+	@ApiOperation("Poll for a task of a certain type")
+	@Trace(operationName = "poll", resourceName = "task")
 	public Task poll(@PathParam("tasktype") String taskType, @QueryParam("workerid") String workerId, @QueryParam("domain") String domain) throws Exception {
 		List<Task> tasks = taskService.poll(taskType, workerId, domain, 1, 100);
 		if(tasks.isEmpty()) {
@@ -70,6 +72,7 @@ public class TaskResource {
 	@Path("/poll/batch/{tasktype}")
 	@ApiOperation("batch Poll for a task of a certain type")
 	@Consumes({ MediaType.WILDCARD })
+	@Trace(operationName = "batch.poll", resourceName = "task")
 	public List<Task> batchPoll(
 			@PathParam("tasktype") String taskType, 
 			@QueryParam("workerid") String workerId,
@@ -101,6 +104,7 @@ public class TaskResource {
 
 	@POST
 	@ApiOperation("Update a task")
+	@Trace(operationName = "update", resourceName = "task")
 	public String updateTask(TaskResult task) throws Exception {
 		NDC.push("rest-update-task-"+ UUID.randomUUID().toString());
 		try {
@@ -115,6 +119,7 @@ public class TaskResource {
 	@Path("/{taskId}/ack")
 	@ApiOperation("Ack Task is recieved")
 	@Consumes({ MediaType.WILDCARD })
+	@Trace(operationName = "ack", resourceName = "task")
 	public String ack(@PathParam("taskId") String taskId, @QueryParam("workerid") String workerId) throws Exception {
 		return "" + taskService.ackTaskRecieved(taskId, workerId);
 	}

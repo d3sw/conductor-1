@@ -35,6 +35,7 @@ import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.service.ExecutionService;
 import com.netflix.conductor.service.MetadataService;
+import datadog.trace.api.Trace;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -102,6 +103,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
+	@Trace(operationName = "start", resourceName = "workflow")
 	public Response startWorkflow(StartWorkflowRequest request, @Context HttpHeaders headers) throws Exception {
 		WorkflowDef def = metadata.getWorkflowDef(request.getName(), request.getVersion());
 		if (def == null) {
@@ -148,6 +150,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
+	@Trace(operationName = "start", resourceName = "workflow")
 	public Response startWorkflow(@Context HttpHeaders headers,
 								  @PathParam("name") String name, @QueryParam("version") Integer version,
 								  @QueryParam("correlationId") String correlationId, Map<String, Object> input) throws Exception {
@@ -167,6 +170,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "getWorkflows", resourceName = "workflow")
 	public List<Workflow> getWorkflows(@PathParam("name") String name, @PathParam("correlationId") String correlationId,
 									   @QueryParam("includeClosed") @DefaultValue("false") boolean includeClosed,
 									   @QueryParam("includeTasks") @DefaultValue("false") boolean includeTasks) throws Exception {
@@ -179,6 +183,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "getExecutionStatus", resourceName = "workflow")
 	public Workflow getExecutionStatus(
 		@PathParam("workflowId") String workflowId,
 		@QueryParam("includeTasks") @DefaultValue("true") boolean includeTasks) throws Exception {
@@ -191,6 +196,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "delete", resourceName = "workflow")
 	public Response delete(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId) throws Exception {
 		Response.ResponseBuilder builder = Response.noContent();
 		NDC.push("rest-remove-" + UUID.randomUUID().toString());
@@ -208,6 +214,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "getRunning", resourceName = "workflow")
 	public List<String> getRunningWorkflow(@PathParam("name") String workflowName, @QueryParam("version") @DefaultValue("1") Integer version,
 										   @QueryParam("startTime") Long startTime, @QueryParam("endTime") Long endTime) throws Exception {
 		if (startTime != null && endTime != null) {
@@ -223,6 +230,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "decide", resourceName = "workflow")
 	public void decide(@PathParam("workflowId") String workflowId) throws Exception {
 		NDC.push("rest-decide-" + UUID.randomUUID().toString());
 		try {
@@ -239,6 +247,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "pause", resourceName = "workflow")
 	public Response pauseWorkflow(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.noContent();
@@ -260,6 +269,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "resume", resourceName = "workflow")
 	public Response resumeWorkflow(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.noContent();
@@ -280,6 +290,7 @@ public class WorkflowResource {
 	@ApiImplicitParams({@ApiImplicitParam(name = "Deluxe-Owf-Context", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "skipTask", resourceName = "workflow")
 	public void skipTaskFromWorkflow(@PathParam("workflowId") String workflowId, @PathParam("taskReferenceName") String taskReferenceName,
 									 SkipTaskRequest skipTaskRequest) throws Exception {
 		NDC.push("rest-skipTask-" + UUID.randomUUID().toString());
@@ -298,6 +309,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
+	@Trace(operationName = "rerun", resourceName = "workflow")
 	public Response rerun(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId, RerunWorkflowRequest request) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.ok(workflowId);
@@ -322,6 +334,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "restart", resourceName = "workflow")
 	public Response restart(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.noContent();
@@ -343,6 +356,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "retry", resourceName = "workflow")
 	public Response retry(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.noContent();
@@ -364,6 +378,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Consumes(MediaType.WILDCARD)
+	@Trace(operationName = "terminate", resourceName = "workflow")
 	public Response terminate(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId, @QueryParam("reason") String reason) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.noContent();
@@ -386,6 +401,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Produces({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
+	@Trace(operationName = "cancel", resourceName = "workflow")
 	public Response cancel(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId, @QueryParam("reason") String reason) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.ok(workflowId);
@@ -407,6 +423,7 @@ public class WorkflowResource {
 		@ApiImplicitParam(name = "Authorization", dataType = "string", paramType = "header"),
 		@ApiImplicitParam(name = "Platform-Trace-Id", dataType = "string", paramType = "header")})
 	@Produces(MediaType.TEXT_PLAIN)
+	@Trace(operationName = "complete", resourceName = "workflow")
 	public Response complete(@Context HttpHeaders headers, @PathParam("workflowId") String workflowId) throws Exception {
 		executor.validateAuth(workflowId, headers);
 		Response.ResponseBuilder builder = Response.ok(workflowId);
@@ -428,6 +445,7 @@ public class WorkflowResource {
 	@Consumes(MediaType.WILDCARD)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path("/search")
+	@Trace(operationName = "search", resourceName = "workflow")
 	public SearchResult<WorkflowSummary> search(
 		@QueryParam("start") @DefaultValue("0") int start,
 		@QueryParam("size") @DefaultValue("100") int size,
