@@ -213,8 +213,8 @@ job "conductor" {
         // DataDog Integration
         DD_ENV = "${meta.tld}"
         DD_AGENT_HOST = "datadog-apm.service.${meta.tld}"
-        DD_SERVICE_NAME = "conductor.server"
-        DD_SERVICE_MAPPING = "web:conductor.server.webapi,postgresql:conductor.server.postgresql"
+        DD_SERVICE_NAME = "conductor.server.webapi"
+        DD_SERVICE_MAPPING = "postgresql:conductor.server.postgresql"
       }
 
       service {

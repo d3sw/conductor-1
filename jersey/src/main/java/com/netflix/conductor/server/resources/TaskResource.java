@@ -21,7 +21,6 @@ import com.netflix.conductor.common.metadata.tasks.TaskExecLog;
 import com.netflix.conductor.common.metadata.tasks.TaskResult;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.service.ExecutionService;
-import datadog.trace.api.Trace;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.log4j.NDC;
@@ -34,7 +33,7 @@ import java.util.*;
 import java.util.Map.Entry;
 
 /**
- * 
+ *
  * @author visingh
  *
  */
@@ -57,9 +56,8 @@ public class TaskResource {
 
 	@GET
 	@Path("/poll/{tasktype}")
-	@Consumes({ MediaType.WILDCARD })
 	@ApiOperation("Poll for a task of a certain type")
-	@Trace(operationName = "poll", resourceName = "task")
+	@Consumes({ MediaType.WILDCARD })
 	public Task poll(@PathParam("tasktype") String taskType, @QueryParam("workerid") String workerId, @QueryParam("domain") String domain) throws Exception {
 		List<Task> tasks = taskService.poll(taskType, workerId, domain, 1, 100);
 		if(tasks.isEmpty()) {
@@ -67,20 +65,19 @@ public class TaskResource {
 		}
 		return tasks.get(0);
 	}
-	
+
 	@GET
 	@Path("/poll/batch/{tasktype}")
 	@ApiOperation("batch Poll for a task of a certain type")
 	@Consumes({ MediaType.WILDCARD })
-	@Trace(operationName = "batch.poll", resourceName = "task")
 	public List<Task> batchPoll(
-			@PathParam("tasktype") String taskType, 
-			@QueryParam("workerid") String workerId,
-			@QueryParam("domain") String domain,
-			@DefaultValue("1") @QueryParam("count") Integer count,
-			@DefaultValue("100") @QueryParam("timeout") Integer timeout
-			
-			) throws Exception {
+		@PathParam("tasktype") String taskType,
+		@QueryParam("workerid") String workerId,
+		@QueryParam("domain") String domain,
+		@DefaultValue("1") @QueryParam("count") Integer count,
+		@DefaultValue("100") @QueryParam("timeout") Integer timeout
+
+	) throws Exception {
 		return taskService.poll(taskType, workerId, domain, count, timeout);
 	}
 
@@ -89,7 +86,7 @@ public class TaskResource {
 	@ApiOperation("Get in progress tasks.  The results are paginated.")
 	@Consumes({ MediaType.WILDCARD })
 	public List<Task> getTasks(@PathParam("tasktype") String taskType, @QueryParam("startKey") String startKey,
-			@QueryParam("count") @DefaultValue("100") Integer count) throws Exception {
+							   @QueryParam("count") @DefaultValue("100") Integer count) throws Exception {
 		return taskService.getTasks(taskType, startKey, count);
 	}
 
@@ -98,13 +95,12 @@ public class TaskResource {
 	@ApiOperation("Get in progress task for a given workflow id.")
 	@Consumes({ MediaType.WILDCARD })
 	public Task getPendingTaskForWorkflow(@PathParam("workflowId") String workflowId, @PathParam("taskRefName") String taskReferenceName)
-			throws Exception {
+		throws Exception {
 		return taskService.getPendingTaskForWorkflow(taskReferenceName, workflowId);
 	}
 
 	@POST
 	@ApiOperation("Update a task")
-	@Trace(operationName = "update", resourceName = "task")
 	public String updateTask(TaskResult task) throws Exception {
 		NDC.push("rest-update-task-"+ UUID.randomUUID().toString());
 		try {
@@ -119,23 +115,22 @@ public class TaskResource {
 	@Path("/{taskId}/ack")
 	@ApiOperation("Ack Task is recieved")
 	@Consumes({ MediaType.WILDCARD })
-	@Trace(operationName = "ack", resourceName = "task")
 	public String ack(@PathParam("taskId") String taskId, @QueryParam("workerid") String workerId) throws Exception {
 		return "" + taskService.ackTaskRecieved(taskId, workerId);
 	}
-	
+
 	@POST
 	@Path("/{taskId}/log")
 	@ApiOperation("Log Task Execution Details")
 	public void log(@PathParam("taskId") String taskId, String log) throws Exception {
-		taskService.log(taskId, log);		
+		taskService.log(taskId, log);
 	}
-	
+
 	@GET
 	@Path("/{taskId}/log")
 	@ApiOperation("Get Task Execution Logs")
 	public List<TaskExecLog> getTaskLogs(@PathParam("taskId") String taskId) throws Exception {
-		return taskService.getTaskLogs(taskId);		
+		return taskService.getTaskLogs(taskId);
 	}
 
 	@GET
@@ -197,7 +192,7 @@ public class TaskResource {
 	public List<PollData> getPollData(@QueryParam("taskType") String taskType) throws Exception {
 		return taskService.getPollData(taskType);
 	}
-	
+
 
 	@GET
 	@Path("/queue/polldata/all")
@@ -215,7 +210,7 @@ public class TaskResource {
 	public String requeue() throws Exception {
 		return "" + taskService.requeuePendingTasks();
 	}
-	
+
 	@POST
 	@Path("/queue/requeue/{taskType}")
 	@ApiOperation("Requeue pending tasks")
@@ -224,5 +219,5 @@ public class TaskResource {
 	public String requeue(@PathParam("taskType") String taskType) throws Exception {
 		return "" + taskService.requeuePendingTasks(taskType);
 	}
-	
+
 }
