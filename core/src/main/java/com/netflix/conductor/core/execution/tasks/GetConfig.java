@@ -27,6 +27,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.Optional;
 
 /**
@@ -37,6 +38,7 @@ public class GetConfig extends WorkflowSystemTask {
 	private static final Logger logger = LoggerFactory.getLogger(GetConfig.class);
 	private MetadataDAO metadataDAO;
 
+	@Inject
 	public GetConfig(MetadataDAO metadataDAO) {
 		super("GET_CONFIG");
 		this.metadataDAO = metadataDAO;
@@ -56,9 +58,9 @@ public class GetConfig extends WorkflowSystemTask {
 			String defaultValue = (String) task.getInputData().get("defaultValue");
 			if (entry.isPresent()) {
 				String effectiveValue = StringUtils.defaultIfEmpty(entry.get().getRight(), defaultValue);
-				task.getOutputData().put("value", effectiveValue);
+				task.getOutputData().put("result", effectiveValue);
 			} else {
-				task.getOutputData().put("value", defaultValue);
+				task.getOutputData().put("result", defaultValue);
 			}
 
 			task.setStatus(Task.Status.COMPLETED);
