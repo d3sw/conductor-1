@@ -3,6 +3,7 @@ dependencies {
 	compile project(':conductor-common')
 	compile project(':conductor-correlation')
 
+	compile 'com.datadoghq:dd-trace-api:0.33.0'
 	compile 'io.reactivex:rxjava:1.2.2'
 	compile 'com.google.inject:guice:4.0+'
 	compile 'com.netflix.spectator:spectator-api:0.68.0'
@@ -11,7 +12,7 @@ dependencies {
 	compile ('com.fasterxml.jackson.core:jackson-core:2.7.5') {force=true}
 	compile 'com.jayway.jsonpath:json-path:2.2.0'
 	compile 'dnsjava:dnsjava:2.1.8'
-	compile 'net.thisptr:jackson-jq:+'
+	compile 'net.thisptr:jackson-jq:0.0.10'
 	compile 'com.auth0:java-jwt:3.2.0'
 	compile 'commons-collections:commons-collections:3.2.2'
 	compile 'org.apache.commons:commons-lang3:3.2.1'
