@@ -23,6 +23,7 @@ import com.netflix.conductor.common.metadata.tasks.Task.Status;
 import com.netflix.conductor.common.metadata.workflow.SubWorkflowParams;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.Workflow.WorkflowStatus;
+import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.events.ScriptEvaluator;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
 import org.apache.commons.collections.MapUtils;
@@ -32,6 +33,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,11 +47,13 @@ public class SubWorkflow extends WorkflowSystemTask {
 
 	private static final Logger logger = LoggerFactory.getLogger(SubWorkflow.class);
 	private static final String SUPPRESS_RESTART_PARAMETER = "suppressRestart";
-	private static final String RESTART_ON = "restartOn";
 	public static final String NAME = "SUB_WORKFLOW";
+	private final boolean async;
 
-	public SubWorkflow() {
+	@Inject
+	public SubWorkflow(Configuration config) {
 		super(NAME);
+		async = Boolean.parseBoolean(config.getProperty("workflow.system.task.subworkflow.async", "true"));
 	}
 
 	@Override
@@ -71,7 +75,8 @@ public class SubWorkflow extends WorkflowSystemTask {
 				workflow.getWorkflowId(), task.getTaskId(), null,
 				workflow.getTaskToDomain(), workflow.getWorkflowIds(),
 				workflow.getAuthorization(), workflow.getContextToken(),
-				workflow.getContextUser(), false);
+				workflow.getContextUser(), workflow.getTraceId(), async);
+
 			task.getOutputData().put("subWorkflowId", subWorkflowId);
 			task.getInputData().put("subWorkflowId", subWorkflowId);
 			task.setStatus(Status.IN_PROGRESS);
@@ -280,7 +285,7 @@ public class SubWorkflow extends WorkflowSystemTask {
 		}
 
 		// Rerun workflow input
-		Map<String, Object> wfInput = getRerunInput(workflow, subWorkflow, rerunWorkflow, task, param);
+		Map<String, Object> wfInput = getRerunInput(workflow, subWorkflow, rerunWorkflow);
 
 		// Add latest rerun output to the map
 		if (rerunWorkflow != null) {
@@ -325,7 +330,7 @@ public class SubWorkflow extends WorkflowSystemTask {
 				workflow.getWorkflowId(), task.getTaskId(), null,
 				workflow.getTaskToDomain(), workflow.getWorkflowIds(),
 				workflow.getAuthorization(), workflow.getContextToken(),
-				workflow.getContextUser(), true);
+				workflow.getContextUser(), workflow.getTraceId(), true);
 
 			task.getOutputData().put("rerunWorkflowId", rerunWorkflowId);
 
@@ -341,67 +346,24 @@ public class SubWorkflow extends WorkflowSystemTask {
 		return true;
 	}
 
-	private Map<String, Object> getRerunInput(Workflow workflow, Workflow subWorkflow, Workflow rerunWorkflow,
-											  Task task, SubWorkflowParams param) {
+	private Map<String, Object> getRerunInput(Workflow workflow, Workflow subWorkflow, Workflow rerunWorkflow) {
 		Map<String, Object> result = new HashMap<>();
 
-		// The workflow details.
+		// The main workflow details
 		result.put("workflowInput", workflow.getInput());
 		result.put("workflowId", workflow.getWorkflowId());
 		result.put("workflowType", workflow.getWorkflowType());
 		result.put("workflowVersion", workflow.getVersion());
-		result.put("contextUser", workflow.getContextUser());
-		result.put("cancelledBy", workflow.getCancelledBy());
 		result.put("correlationId", workflow.getCorrelationId());
-		result.put("reason", subWorkflow.getReasonForIncompletion());
 		result.put("failureStatus", workflow.getStatus().toString());
-		result.put("restartCount", workflow.getRestartCount());
-		result.put("rerunCount", workflow.getRerunCount());
-
-		// Failed task(sub-workflow) details
-		Map<String, Object> failedTask = new HashMap<>();
-		failedTask.put("taskId", task.getTaskId());
-		failedTask.put("input", task.getInputData());
-		failedTask.put("output", task.getOutputData());
-		failedTask.put("retryCount", task.getRetryCount());
-		failedTask.put("referenceName", task.getReferenceTaskName());
-		failedTask.put("reasonForIncompletion", task.getReasonForIncompletion());
-		result.put("failedTask", failedTask);
+		result.put("reason", subWorkflow.getReasonForIncompletion());
 
 		// Failed sub-workflow details
 		Map<String, Object> failedSubWorkflow = new HashMap<>();
-		failedSubWorkflow.put("workflowInput", subWorkflow.getInput());
 		failedSubWorkflow.put("workflowId", subWorkflow.getWorkflowId());
-		failedSubWorkflow.put("workflowType", subWorkflow.getWorkflowType());
-		failedSubWorkflow.put("workflowVersion", subWorkflow.getVersion());
-		failedSubWorkflow.put("contextUser", subWorkflow.getContextUser());
-		failedSubWorkflow.put("cancelledBy", subWorkflow.getCancelledBy());
-		failedSubWorkflow.put("correlationId", subWorkflow.getCorrelationId());
-		failedSubWorkflow.put("reason", subWorkflow.getReasonForIncompletion());
 		failedSubWorkflow.put("failureStatus", subWorkflow.getStatus().toString());
-		failedSubWorkflow.put("restartCount", subWorkflow.getRestartCount());
-		failedSubWorkflow.put("rerunCount", subWorkflow.getRerunCount());
 		result.put("subWorkflow", failedSubWorkflow);
 
-		Object originalFailed = subWorkflow.getOutput().get("originalFailedTask");
-		if (originalFailed == null) {
-			Map<String, Object> map = new HashMap<>();
-			map.put("input", task.getInputData());
-			map.put("output", task.getOutputData());
-			map.put("taskId", task.getTaskId());
-			map.put("retryCount", task.getRetryCount());
-			map.put("referenceName", task.getReferenceTaskName());
-			map.put("failureStatus", task.getStatus());
-			map.put("reasonForIncompletion", task.getReasonForIncompletion());
-			map.put("workflowId", workflow.getWorkflowId());
-			map.put("workflowType", workflow.getWorkflowType());
-			map.put("workflowVersion", workflow.getVersion());
-			map.put("workflowRestartCount", workflow.getRestartCount());
-			map.put("workflowRerunCount", workflow.getRerunCount());
-			originalFailed = map;
-		}
-		result.put("originalFailedTask", originalFailed);
-		result.put("rerunInput", param.getRerunWorkflow().getInput());
 		if (rerunWorkflow != null) {
 			result.put("rerunOutput", rerunWorkflow.getOutput());
 		}

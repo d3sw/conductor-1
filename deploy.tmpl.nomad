@@ -110,7 +110,7 @@ job "conductor" {
         }
       }
     } // end ui task
-  } // end ui group
+  } // end ui group  
 
   group "server" {
     count = 5
@@ -161,30 +161,28 @@ job "conductor" {
         APP_VERSION = "[[.app_version]]"
 
         // Database settings
-        db = "elasticsearch"
+        db = "aurora"
 
         // Workflow settings
         workflow_failure_expandInline                = "false"
-        decider_sweep_frequency_seconds              = "30"
-        workflow_event_processor_thread_count        = "10"
-        workflow_event_processor_refresh_seconds     = "30"
+        decider_sweep_frequency_seconds              = "60"
+        workflow_system_task_worker_thread_count     = "5"
         workflow_system_task_worker_poll_count       = "50"
         workflow_system_task_worker_poll_timeout     = "1000"
         workflow_system_task_worker_poll_frequency   = "1000"
         workflow_system_task_worker_queue_size       = "300"
         workflow_system_task_http_unack_timeout      = "300"
-        workflow_sweeper_frequency                   = "1000"
-        workflow_sweeper_thread_count                = 50
+        workflow_sweeper_frequency                   = "500"
+        workflow_sweeper_thread_count                = "50"
+        workflow_sweeper_pool_timeout                = "1000"
         workflow_sweeper_batch_sherlock_service      = "sherlock.service.${meta.tld}"
-        workflow_sweeper_batch_sherlock_worker_count = 100
+        workflow_sweeper_batch_sherlock_worker_count = "100"
         workflow_sweeper_batch_names                 = "sherlock"
         workflow_batch_sherlock_enabled              = "true"
         workflow_lazy_decider                        = "true"
 
         // Elasticsearch settings.
-        workflow_elasticsearch_mode                  = "elasticsearch"
-        workflow_elasticsearch_initial_sleep_seconds = "0"
-        workflow_elasticsearch_stale_period_seconds  = "300"
+        workflow_elasticsearch_mode = "none"
 
         // Auth settings. Rest settings are in vault
         conductor_auth_service  = "auth.service.${meta.tld}"
@@ -192,29 +190,31 @@ job "conductor" {
 
         // One MQ settings
         io_shotgun_dns            = "shotgun.service.${meta.tld}"
-        io_shotgun_service        = "conductor-server-${meta.tld}"
+        io_shotgun_service        = "${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}-${meta.tld}"
         io_shotgun_publishRetryIn = "5,10,15"
         io_shotgun_shared         = "false"
-        io_shotgun_manualAck      = "true"
         com_bydeluxe_onemq_log    = "false"
 
-        // NATS settings
-        io_nats_streaming_url            = "nats://nats.service.${meta.tld}:4222"
-        io_nats_streaming_clusterId      = "events-streaming"
-        io_nats_streaming_durableName    = "conductor-server-${meta.tld}"
-        io_nats_streaming_publishRetryIn = "5,10,15"
-
-        // Additional nats & asset modules
-        conductor_additional_modules = "com.netflix.conductor.contribs.NatsStreamModule,com.netflix.conductor.contribs.ShotgunModule"
+        // Additional modules
+        conductor_additional_modules = "com.netflix.conductor.contribs.ShotgunModule"
 
         // Exclude demo workflows
         loadSample = "false"
 
-        // The following will be provided by secret/conductor
-        //  - conductor_auth_url
-        //  - conductor_auth_clientId
-        //  - conductor_auth_clientSecret
-        //  - workflow_elasticsearch_url
+        // Disable system-level loggers by default
+        log4j_logger_com_jayway_jsonpath = "OFF"
+        log4j_logger_com_zaxxer_hikari = "INFO"
+        log4j_logger_org_eclipse_jetty = "INFO"
+        log4j_logger_org_apache_http = "INFO"
+        log4j_logger_io_grpc_netty = "INFO"
+        log4j_logger_io_swagger = "OFF"
+        log4j_logger_tracer = "OFF"
+
+        // DataDog Integration
+        DD_ENV = "${meta.tld}"
+        DD_AGENT_HOST = "datadog-apm.service.${meta.tld}"
+        DD_SERVICE_NAME = "conductor.server.webapi"
+        DD_SERVICE_MAPPING = "postgresql:conductor.server.postgresql"
       }
 
       service {
@@ -224,7 +224,7 @@ job "conductor" {
 
         check {
           type     = "http"
-          path     = "/v1/health"
+          path     = "/v1/status"
           interval = "10s"
           timeout  = "3s"
           check_restart {
@@ -257,7 +257,7 @@ job "conductor" {
         }
       }
     } // end server task
-  } // end server group
+  } // end server group  
 } // end job
 
 job "conductor-archiver" {

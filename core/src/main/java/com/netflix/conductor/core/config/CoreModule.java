@@ -50,7 +50,13 @@ public class CoreModule extends AbstractModule {
 		bind(SherlockBatchProcessor.class).asEagerSingleton();
 		bind(BatchSweeper.class).asEagerSingleton();
 		bind(Batch.class).asEagerSingleton();
+		bind(Terminate.class).asEagerSingleton();
 		bind(Lambda.class).asEagerSingleton();
+		bind(GetTaskData.class).asEagerSingleton();
+		bind(GetWorkflowData.class).asEagerSingleton();
+		bind(GetTaskStatus.class).asEagerSingleton();
+		bind(GetWorkflowStatus.class).asEagerSingleton();
+		bind(GetConfig.class).asEagerSingleton();
 	}
 	
 }
