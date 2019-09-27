@@ -76,7 +76,7 @@ job "conductor" {
       }
 
       service {
-        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.${meta.public_tld} auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}"]
+        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.${meta.public_tld}/ auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}/"]
         name = "${JOB}-${TASK}"
         port = "http"
 
@@ -218,21 +218,21 @@ job "conductor" {
       }
 
       service {
-        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.${meta.public_tld} auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}"]
+        tags = ["urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.dmlib.${meta.public_tld}/ auth=true", "urlprefix-${NOMAD_JOB_NAME}-${NOMAD_TASK_NAME}.service.${meta.tld}/"]
         name = "${JOB}-${TASK}"
         port = "http"
 
-        check {
-          type     = "http"
-          path     = "/v1/health"
-          interval = "10s"
-          timeout  = "3s"
-          check_restart {
-            limit           = 3
-            grace           = "180s"
-            ignore_warnings = false
-          }
-        }
+//        check {
+//          type     = "http"
+//          path     = "/v1/health"
+//          interval = "10s"
+//          timeout  = "3s"
+//          check_restart {
+//            limit           = 3
+//            grace           = "180s"
+//            ignore_warnings = false
+//          }
+//        }
       }
 
       # Write secrets to the file that can be mounted as volume
