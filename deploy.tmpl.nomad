@@ -226,7 +226,7 @@ job "conductor" {
           type     = "http"
           path     = "/v1/status"
           interval = "10s"
-          timeout  = "3s"
+          timeout  = "5s"
           check_restart {
             limit           = 3
             grace           = "180s"
