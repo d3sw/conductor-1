@@ -224,9 +224,9 @@ job "conductor" {
 
         check {
           type     = "http"
-          path     = "/v1/status"
+          path     = "/api/v1/status"
           interval = "10s"
-          timeout  = "5s"
+          timeout  = "3s"
           check_restart {
             limit           = 3
             grace           = "180s"
