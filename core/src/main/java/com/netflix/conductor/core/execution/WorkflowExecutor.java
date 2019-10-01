@@ -115,7 +115,7 @@ public class WorkflowExecutor {
 		this.activeWorkerLastPollnSecs = config.getIntProperty("tasks.active.worker.lastpoll", 10);
 		this.taskStatusListener = taskStatusListener;
 		this.workflowStatusListener = workflowStatusListener;
-		this.decider = new DeciderService(metadata, om);
+		this.decider = new DeciderService(metadata, om, config);
 		this.validateAuth = Boolean.parseBoolean(config.getProperty("workflow.auth.validate", "false"));
 		this.traceIdEnabled = Boolean.parseBoolean(config.getProperty("workflow.traceid.enabled", "false"));
 		this.authContextEnabled = Boolean.parseBoolean(config.getProperty("workflow.authcontext.enabled", "false"));
@@ -1198,6 +1198,10 @@ public class WorkflowExecutor {
 					}
 				}
 			}
+			if (!outcome.tasksToBeDeleted.isEmpty()) {
+				outcome.tasksToBeDeleted.forEach(task -> edao.removeTask(task));
+			}
+
 			stateChanged = scheduleTask(workflow, tasksToBeScheduled) || stateChanged;
 
 			if(!outcome.tasksToBeUpdated.isEmpty() || !outcome.tasksToBeScheduled.isEmpty()) {
