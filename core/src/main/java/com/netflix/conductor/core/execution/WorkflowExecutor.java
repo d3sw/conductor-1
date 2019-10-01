@@ -1496,7 +1496,13 @@ public class WorkflowExecutor {
 		if (task.getRetriedTaskId() == null) {
 			return s;
 		}
-		return s + getTaskDuration(s, edao.getTask(task.getRetriedTaskId()));
+
+		// Might be null due to auto-cleanup
+		Task retriedTask = edao.getTask(task.getRetriedTaskId());
+		if (retriedTask == null) {
+			return s;
+		}
+		return s + getTaskDuration(s, retriedTask);
 	}
 
 	@VisibleForTesting
