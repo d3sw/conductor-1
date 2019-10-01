@@ -143,8 +143,9 @@ public class DeciderService {
 								&& t.getRetryCount() != 0 // Keep original
 								&& t.getRetryCount() < task.getRetryCount()) // Keep last failed
 							.collect(Collectors.toList());
-
-						System.out.println("*** To be deleted = " + outcome.tasksToBeDeleted);
+						if (!outcome.tasksToBeDeleted.isEmpty()) {
+							logger.debug("Tasks to be deleted " + outcome.tasksToBeDeleted);
+						}
 					}
 				}
 			}
