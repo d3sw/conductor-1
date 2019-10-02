@@ -214,7 +214,7 @@ job "conductor" {
         DD_AGENT_HOST = "datadog-apm.service.${meta.tld}"
         DD_SERVICE_NAME = "conductor.server.webapi"
         DD_SERVICE_MAPPING = "postgresql:conductor.server.postgresql"
-        DD_TRACE_SPAN_TAGS = "env:${meta.tld}"
+        DD_TRACE_GLOBAL_TAGS = "env:${meta.tld}"
       }
 
       service {
