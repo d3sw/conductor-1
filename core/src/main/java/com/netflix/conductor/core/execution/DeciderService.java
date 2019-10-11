@@ -491,6 +491,12 @@ public class DeciderService {
 				}
 				break;
 			case JOIN:
+				Optional<Task> joinExists = workflow.getTasks().stream()
+					.filter(t -> t.getReferenceTaskName().equalsIgnoreCase(taskToSchedule.getTaskReferenceName()))
+					.findFirst();
+				if (joinExists.isPresent()) {
+					break;
+				}
 				Map<String, Object> joinInput = new HashMap<String, Object>();
 				joinInput.put("joinOn", taskToSchedule.getJoinOn());
 				Task joinTask = SystemTask.JoinTask(workflow, taskId, taskToSchedule, joinInput);
