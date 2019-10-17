@@ -50,10 +50,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.*;
 import java.util.*;
 
 
@@ -144,6 +141,7 @@ public class WorkflowResource {
 
 		NDC.push("rest-start-" + UUID.randomUUID().toString());
 		try {
+			logger.debug("About to start workflow " + workflowId + " for contextUser=" + contextUser + ", traceId=" + traceId);
 			executor.startWorkflow(workflowId, def.getName(), def.getVersion(), request.getCorrelationId(),
 				request.getInput(), null, request.getTaskToDomain(),
 				auth, contextToken, contextUser, traceId);
