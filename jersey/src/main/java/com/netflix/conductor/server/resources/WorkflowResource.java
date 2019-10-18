@@ -36,7 +36,6 @@ import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.service.ExecutionService;
 import com.netflix.conductor.service.MetadataService;
-import datadog.trace.api.CorrelationIdentifier;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -45,19 +44,14 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.ApiResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.NDC;
-import org.apache.logging.log4j.ThreadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.util.*;
-
-import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
-
 
 /**
  * @author Viren
@@ -140,10 +134,6 @@ public class WorkflowResource {
 		}
 
 		NDC.push("rest-start-" + UUID.randomUUID().toString());
-		MDC.put("dd.trace_id", String.valueOf(defaultIfEmpty(traceId, CorrelationIdentifier.getTraceId())));
-		MDC.put("dd.span_id", String.valueOf(CorrelationIdentifier.getSpanId()));
-		ThreadContext.put("dd.trace_id", String.valueOf(defaultIfEmpty(traceId, CorrelationIdentifier.getTraceId())));
-		ThreadContext.put("dd.span_id", String.valueOf(CorrelationIdentifier.getSpanId()));
 		try {
 			String correlationId = handleCorrelationId(workflowId, headers, builder);
 			if (StringUtils.isNotEmpty(correlationId)) {
@@ -157,10 +147,6 @@ public class WorkflowResource {
 				auth, contextToken, contextUser, traceId);
 		} finally {
 			NDC.remove();
-			MDC.remove("dd.trace_id");
-			MDC.remove("dd.span_id");
-			ThreadContext.remove("dd.trace_id");
-			ThreadContext.remove("dd.span_id");
 		}
 		return builder.build();
 	}
