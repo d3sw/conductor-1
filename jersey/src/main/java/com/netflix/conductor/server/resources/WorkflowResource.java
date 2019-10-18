@@ -139,9 +139,6 @@ public class WorkflowResource {
 			if (StringUtils.isNotEmpty(correlationId)) {
 				request.setCorrelationId(correlationId);
 			}
-
-			logger.debug("About to start workflow " + workflowId + " for contextUser=" + contextUser
-				+ ",correlationId=" + correlationId + ",traceId=" + traceId);
 			executor.startWorkflow(workflowId, def.getName(), def.getVersion(), request.getCorrelationId(),
 				request.getInput(), null, request.getTaskToDomain(),
 				auth, contextToken, contextUser, traceId);
