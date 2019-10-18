@@ -215,6 +215,7 @@ job "conductor" {
         DD_SERVICE_NAME = "conductor.server.webapi"
         DD_SERVICE_MAPPING = "postgresql:conductor.server.postgresql"
         DD_TRACE_GLOBAL_TAGS = "env:${meta.tld}"
+        DD_LOGS_INJECTION = "true"
       }
 
       service {

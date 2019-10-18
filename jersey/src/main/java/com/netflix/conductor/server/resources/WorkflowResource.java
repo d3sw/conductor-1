@@ -36,6 +36,7 @@ import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.service.ExecutionService;
 import com.netflix.conductor.service.MetadataService;
+import datadog.trace.api.CorrelationIdentifier;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -44,14 +45,18 @@ import io.swagger.annotations.ApiResponses;
 import io.swagger.annotations.ApiResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.NDC;
+import org.apache.logging.log4j.ThreadContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.util.*;
+
+import static org.apache.commons.lang3.StringUtils.defaultIfEmpty;
 
 
 /**
@@ -122,11 +127,6 @@ public class WorkflowResource {
 		String workflowId = IDGenerator.generate();
 		Response.ResponseBuilder builder = Response.ok(workflowId);
 
-		String correlationId = handleCorrelationId(workflowId, headers, builder);
-		if (StringUtils.isNotEmpty(correlationId)) {
-			request.setCorrelationId(correlationId);
-		}
-
 		String contextToken = null;
 		String contextUser = null;
 		String traceId = null;
@@ -140,13 +140,27 @@ public class WorkflowResource {
 		}
 
 		NDC.push("rest-start-" + UUID.randomUUID().toString());
+		MDC.put("dd.trace_id", String.valueOf(defaultIfEmpty(traceId, CorrelationIdentifier.getTraceId())));
+		MDC.put("dd.span_id", String.valueOf(CorrelationIdentifier.getSpanId()));
+		ThreadContext.put("dd.trace_id", String.valueOf(defaultIfEmpty(traceId, CorrelationIdentifier.getTraceId())));
+		ThreadContext.put("dd.span_id", String.valueOf(CorrelationIdentifier.getSpanId()));
 		try {
-			logger.debug("About to start workflow " + workflowId + " for contextUser=" + contextUser + ", traceId=" + traceId);
+			String correlationId = handleCorrelationId(workflowId, headers, builder);
+			if (StringUtils.isNotEmpty(correlationId)) {
+				request.setCorrelationId(correlationId);
+			}
+
+			logger.debug("About to start workflow " + workflowId + " for contextUser=" + contextUser
+				+ ",correlationId=" + correlationId + ",traceId=" + traceId);
 			executor.startWorkflow(workflowId, def.getName(), def.getVersion(), request.getCorrelationId(),
 				request.getInput(), null, request.getTaskToDomain(),
 				auth, contextToken, contextUser, traceId);
 		} finally {
 			NDC.remove();
+			MDC.remove("dd.trace_id");
+			MDC.remove("dd.span_id");
+			ThreadContext.remove("dd.trace_id");
+			ThreadContext.remove("dd.span_id");
 		}
 		return builder.build();
 	}
