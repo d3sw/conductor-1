@@ -369,8 +369,8 @@ dateChangeFrom(e){
 
                   </Col>
                     <Col md={2}>
-                         <Button bsSize="small" bsStyle="success" onClick={this.clearBtnClick}>&nbsp;&nbsp;Clear date range</Button>
-
+                         <Button bsSize="small" bsStyle="success" onClick={this.clearBtnClick}>&nbsp;&nbsp;Clear date range</Button> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                          <Button bsSize="small" bsStyle="success" onClick={this.exportcsv}>Export Report</Button>
                      </Col>
              </Row>
           </Grid>
@@ -384,7 +384,7 @@ dateChangeFrom(e){
           {parseInt(this.state.start) >= 100?<a onClick={this.prevPage}><i className="fa fa-backward"></i>&nbsp;Previous Page</a>:''}
           {parseInt(this.state.start) + 100 <= totalHits?<a onClick={this.nextPage}>&nbsp;&nbsp;Next Page&nbsp;<i className="fa fa-forward"></i></a>:''}
         </span>
-          <Button bsSize="small" bsStyle="success" onClick={this.exportcsv}>Download CSV</Button>
+
         <BootstrapTable ref={node => this.table = node} data={wfs} striped={true} hover={true} search={false} csvFileName={"conductorReport_"+dateTime+".csv"}  pagination={false} options={{sizePerPage:100}}>
           <TableHeaderColumn dataField="workflowType" isKey={true} dataAlign="left" dataSort={true}>Workflow</TableHeaderColumn>
           <TableHeaderColumn dataField="workflowId" dataSort={true} dataFormat={linkMaker}>Workflow ID</TableHeaderColumn>
