@@ -269,10 +269,30 @@ dateChangeFrom(e){
       totalHits = this.props.data.totalHits;
       found = wfs.length;
     }
+      var jobId;
+      var orderId;
       for ( var index = 0; index < wfs.length; index++) {
              var res = String(wfs[index].correlationId);
              var replaced=res.replace(/\"/g, "");
              wfs[index].correlationId = replaced;
+             var jobidUrn = replaced.split(",").find(function(v){
+               return v.indexOf("jobid") > -1;
+             });
+              if(typeof jobidUrn != "undefined")
+              {
+                  jobId=jobidUrn.split(":");
+                  wfs[index].jobId=jobId[jobId.length - 1];
+              }
+
+               var orderidUrn = replaced.split(",").find(function(v){
+                        return v.indexOf("orderid") > -1;
+                 });
+
+                 if(typeof orderidUrn != "undefined")
+                  {
+                    orderId=orderidUrn.split(":");
+                    wfs[index].orderId=orderId[orderId.length - 1];
+                  }
         }
 
     let start = parseInt(this.state.start);
@@ -395,7 +415,8 @@ dateChangeFrom(e){
           <TableHeaderColumn dataField="reasonForIncompletion" hidden={false}>Failure Reason</TableHeaderColumn>
           <TableHeaderColumn dataField="input" width="300"  hidden={true}>Input</TableHeaderColumn>
           <TableHeaderColumn dataField="workflowId" width="300" dataFormat={miniDetails} hidden={true}>&nbsp;</TableHeaderColumn>
-          <TableHeaderColumn dataField="correlationId">correlationId</TableHeaderColumn>
+          <TableHeaderColumn dataField="jobId">jobId</TableHeaderColumn>
+          <TableHeaderColumn dataField="orderId">orderId</TableHeaderColumn>
         </BootstrapTable>
 
         <br/><br/>
