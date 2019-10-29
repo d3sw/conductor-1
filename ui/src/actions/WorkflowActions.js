@@ -1,23 +1,24 @@
 import http from '../core/HttpClient';
-import * as authHelper from '../core/AuthHelper';
 
-export function searchWorkflows(query, search, hours, fullstr, start, range, frmdate, todate) {
+export function searchWorkflows(query, search, hours, fullstr, start, range,frmdate,todate) {
 
   return function (dispatch) {
     dispatch({
       type: 'GET_WORKFLOWS',
       search: search
     });
-    if (search != null && search.length > 0) {
-      if (fullstr) {
-        search = '"' + search + '"';
+    if(search != null && search.length > 0) {
+      if(fullstr)
+      {
+      search = '"' + search + '"';
       }
-      if (search.includes(":")) {
-        search = search.replace(new RegExp(':', 'g'), '\\:');
+      if(search.includes(":"))
+      {
+       search =search.replace(new RegExp(':','g'), '\\:');
       }
     }
 
-    return http.get('/api/wfe/' + status + '?q=' + query + '&h=' + hours + '&freeText=' + search + '&start=' + start + "&range=" + range + "&frmdate=" + frmdate + "&todate=" + todate).then((data) => {
+    return http.get('/api/wfe/' + status + '?q=' + query + '&h=' + hours + '&freeText=' + search + '&start=' + start + "&range=" + range+"&frmdate="+frmdate+"&todate="+todate).then((data) => {
       dispatch({
         type: 'RECEIVED_WORKFLOWS',
         data
@@ -31,7 +32,7 @@ export function searchWorkflows(query, search, hours, fullstr, start, range, frm
   }
 }
 
-export function getWorkflowDetails(workflowId) {
+export function getWorkflowDetails(workflowId){
   return function (dispatch) {
     dispatch({
       type: 'GET_WORKFLOW_DETAILS',
@@ -52,15 +53,15 @@ export function getWorkflowDetails(workflowId) {
   }
 }
 
-export function terminateWorkflow(workflowId) {
+export function terminateWorkflow(workflowId){
   return function (dispatch) {
     dispatch({
       type: 'REQUESTED_TERMINATE_WORKFLOW',
       workflowId
     });
 
-    const token = authHelper.getLocalAuthToken();
-    return http.delete('/api/wfe/terminate/' + workflowId, null, token).then((data) => {
+
+    return http.delete('/api/wfe/terminate/' + workflowId).then((data) => {
       dispatch({
         type: 'RECEIVED_TERMINATE_WORKFLOW',
         workflowId
@@ -74,15 +75,15 @@ export function terminateWorkflow(workflowId) {
   }
 }
 
-export function cancelWorkflow(workflowId) {
+export function cancelWorkflow(workflowId){
   return function (dispatch) {
     dispatch({
       type: 'REQUESTED_CANCEL_WORKFLOW',
       workflowId
     });
 
-    const token = authHelper.getLocalAuthToken();
-    return http.post('/api/wfe/cancel/' + workflowId, null, token).then((data) => {
+
+    return http.post('/api/wfe/cancel/' + workflowId).then((data) => {
       dispatch({
         type: 'RECEIVED_CANCEL_WORKFLOW',
         workflowId
@@ -96,15 +97,15 @@ export function cancelWorkflow(workflowId) {
   }
 }
 
-export function restartWorfklow(workflowId) {
+export function restartWorfklow(workflowId){
   return function (dispatch) {
     dispatch({
       type: 'REQUESTED_RESTART_WORKFLOW',
       workflowId
     });
 
-    const token = authHelper.getLocalAuthToken();
-    return http.post('/api/wfe/restart/' + workflowId, null, token).then((data) => {
+
+    return http.post('/api/wfe/restart/' + workflowId).then((data) => {
       dispatch({
         type: 'RECEIVED_RESTART_WORKFLOW',
         workflowId
@@ -118,15 +119,15 @@ export function restartWorfklow(workflowId) {
   }
 }
 
-export function retryWorfklow(workflowId) {
+export function retryWorfklow(workflowId){
   return function (dispatch) {
     dispatch({
       type: 'REQUESTED_RETRY_WORKFLOW',
       workflowId
     });
 
-    const token = authHelper.getLocalAuthToken();
-    return http.post('/api/wfe/retry/' + workflowId, null, token).then((data) => {
+
+    return http.post('/api/wfe/retry/' + workflowId).then((data) => {
       dispatch({
         type: 'RECEIVED_RETRY_WORKFLOW',
         workflowId
@@ -147,8 +148,8 @@ export function pauseWorfklow(workflowId) {
       workflowId
     });
 
-    const token = authHelper.getLocalAuthToken();
-    return http.post('/api/wfe/pause/' + workflowId, null, token).then((data) => {
+
+    return http.post('/api/wfe/pause/' + workflowId).then((data) => {
       dispatch({
         type: 'RECEIVED_PAUSE_WORKFLOW',
         workflowId
@@ -169,8 +170,8 @@ export function resumeWorfklow(workflowId) {
       workflowId
     });
 
-    const token = authHelper.getLocalAuthToken();
-    return http.post('/api/wfe/resume/' + workflowId, null, token).then((data) => {
+
+    return http.post('/api/wfe/resume/' + workflowId).then((data) => {
       dispatch({
         type: 'RECEIVED_RESUME_WORKFLOW',
         workflowId
@@ -192,10 +193,11 @@ export function getWorkflowDefs() {
       type: 'LIST_WORKFLOWS'
     });
 
+
     return http.get('/api/wfe/metadata/workflow').then((data) => {
       dispatch({
         type: 'RECEIVED_LIST_WORKFLOWS',
-        workflows: data
+        workflows : data
       });
     }).catch((e) => {
       dispatch({
@@ -206,13 +208,14 @@ export function getWorkflowDefs() {
   }
 }
 
-export function getWorkflowMetaDetails(name, version) {
+export function getWorkflowMetaDetails(name, version){
   return function (dispatch) {
     dispatch({
       type: 'GET_WORKFLOW_DEF',
       name,
       version
     });
+
 
     return http.get('/api/wfe/metadata/workflow/' + name + '/' + version).then((data) => {
       dispatch({
@@ -237,6 +240,7 @@ export function getTaskDefs() {
       type: 'GET_TASK_DEFS'
     });
 
+
     return http.get('/api/wfe/metadata/taskdef').then((data) => {
       dispatch({
         type: 'RECEIVED_TASK_DEFS',
@@ -258,6 +262,7 @@ export function getQueueData() {
       type: 'GET_POLL_DATA'
     });
 
+
     return http.get('/api/wfe/queue/data').then((data) => {
       dispatch({
         type: 'RECEIVED_POLL_DATA',
@@ -272,12 +277,13 @@ export function getQueueData() {
   }
 }
 
-export function updateWorkflow(workflow) {
+export function updateWorkflow(workflow){
   return function (dispatch) {
     dispatch({
       type: 'REQUESTED_UPDATE_WORKFLOW_DEF',
       workflow
     });
+
 
     return http.put('/api/wfe/metadata/', workflow).then((data) => {
       dispatch({
@@ -303,7 +309,7 @@ export function getEventHandlers() {
     return http.get('/api/events').then((data) => {
       dispatch({
         type: 'RECEIVED_LIST_EVENT_HANDLERS',
-        events: data
+        events : data
       });
     }).catch((e) => {
       dispatch({
@@ -325,7 +331,7 @@ export function getEvents(event, time, query) {
     return http.get('/api/events/executions').then((data) => {
       dispatch({
         type: 'RECEIVED_LIST_EVENT',
-        events: data
+        events : data
       });
     }).catch((e) => {
       dispatch({
@@ -347,7 +353,7 @@ export function getTaskLogs(taskId) {
     return http.get('/api/wfe/task/log' + taskId).then((data) => {
       dispatch({
         type: 'RECEIVED_GET_TASK_LOGS',
-        logs: data
+        logs : data
       });
     }).catch((e) => {
       dispatch({

@@ -1,6 +1,9 @@
 import {Router} from 'express';
+import Bunyan from 'bunyan';
 import http from '../core/HttpClient';
 import lookup from '../core/ApiLookup';
+
+var log = Bunyan.createLogger({src: true, name: 'events-api'});
 
 const router = new Router();
 
