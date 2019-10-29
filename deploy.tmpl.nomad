@@ -27,7 +27,7 @@ job "conductor" {
 
     # vault declaration
     vault {
-      change_mode = "noop"
+      change_mode = "restart"
       env         = false
       policies    = ["read-secrets"]
     }
@@ -115,7 +115,7 @@ job "conductor" {
 
     # vault declaration
     vault {
-      change_mode = "noop"
+      change_mode = "restart"
       env         = false
       policies    = ["read-secrets"]
     }
