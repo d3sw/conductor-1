@@ -284,7 +284,7 @@ job "conductor-archiver" {
 
     # vault declaration
     vault {
-      change_mode = "noop"
+      change_mode = "restart"
       env         = false
       policies    = ["read-secrets"]
     }
