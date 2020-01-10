@@ -1,6 +1,6 @@
 provider "aws" {
   region                  = "${var.region}"
-  profile                 = "deluxeone-corp-live"
+  profile                 = "${module.vars.aws-profile}"
   shared_credentials_file = "${pathexpand("~/.aws/credentials")}"
 }
 
