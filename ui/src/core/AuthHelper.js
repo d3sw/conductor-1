@@ -21,6 +21,7 @@ const refreshTokenKey = "REFRESH_TOKEN";
 const authExpirationDateKey = "AUTH_EXPIRATION_DATE";
 const refreshExpirationDateKey = "REFRESH_EXPIRATION_DATE";
 
+const ROOT_REDIRECT_URL = '#/';
 export const USER_ROLE_ADMIN = 'deluxe.conductor-ui.admin';
 
 export const USER_AUTHORIZED_ROLES = [
@@ -39,6 +40,16 @@ const getURLParams = (param) => {
   }
 };
 
+const saveRedirectURI = () => {
+  var redirectURI = window.location.hash;
+  redirectURI = redirectURI.substr(0, redirectURI.lastIndexOf('?'));
+
+  // No need to set for root login url
+  if (ROOT_REDIRECT_URL !== redirectURI) {
+    sessionStorage.setItem('redirectURI', redirectURI);
+  }
+};
+
 export const authLogin = (isAuthenticated) => {
   return (dispatch) => {
     const code = getURLParams('code');
@@ -51,9 +62,7 @@ export const authLogin = (isAuthenticated) => {
         setupAuthCheck(refreshTokenVal, getRefreshTokenExpiration())(dispatch);
         dispatch(authLoginSucceeded(authTokenVal, 0, refreshTokenVal, 0));
       } else {
-        var redirectURI = window.location.hash;
-        redirectURI = redirectURI.substr(0, redirectURI.lastIndexOf('?'));
-        sessionStorage.setItem('redirectURI', redirectURI);
+        saveRedirectURI();
 
         let params = {
           redirectURI: window.location.origin
@@ -115,7 +124,9 @@ const authToken = (code) => (dispatch) => {
       setupAuthCheck(data.refresh_token, data.expires_in)(dispatch);
       dispatch(authLoginSucceeded(data.access_token, data.expires_in, data.refresh_token, data.refresh_expires_in));
       window.history.replaceState({}, document.title, "/");
-      window.location.href = '/' + sessionStorage.getItem('redirectURI');
+      var redirectURI = sessionStorage.getItem('redirectURI');
+      sessionStorage.clear();
+      window.location.href = '/' + (redirectURI == null ? '#/' : redirectURI);
     } else {
       throw new Error("Unknown data received");
     }
@@ -173,6 +184,7 @@ export const setupInactivityTimer = (refreshToken) => (dispatch) => {
     }
 
     inactivityTimer = setTimeout(() => {
+      saveRedirectURI();
       authLogout(refreshToken)(dispatch);
     }, timeout);
   };
@@ -232,7 +244,6 @@ const saveTokensLocally = (authToken, authExp, refreshToken, refreshExp) => {
 };
 
 const removeTokensLocally = () => {
-  sessionStorage.clear();
   localStorage.removeItem(authTokenKey);
   localStorage.removeItem(refreshTokenKey);
   localStorage.removeItem(authExpirationDateKey);
