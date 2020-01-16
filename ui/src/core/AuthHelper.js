@@ -51,6 +51,10 @@ export const authLogin = (isAuthenticated) => {
         setupAuthCheck(refreshTokenVal, getRefreshTokenExpiration())(dispatch);
         dispatch(authLoginSucceeded(authTokenVal, 0, refreshTokenVal, 0));
       } else {
+        var redirectURI = window.location.hash;
+        redirectURI = redirectURI.substr(0, redirectURI.lastIndexOf('?'));
+        sessionStorage.setItem('redirectURI', redirectURI);
+
         let params = {
           redirectURI: window.location.origin
         };
@@ -105,14 +109,13 @@ const authToken = (code) => (dispatch) => {
       setTimeout(() => window.location.href = window.location.origin, 3000);
     }
   }).then(data => {
-    var redirectPath = window.location.hash;
     if (!!data && !!data.access_token) {
       saveTokensLocally(data.access_token, data.expires_in, data.refresh_token, data.refresh_expires_in);
       authUserInfo(data.access_token)(dispatch);
       setupAuthCheck(data.refresh_token, data.expires_in)(dispatch);
       dispatch(authLoginSucceeded(data.access_token, data.expires_in, data.refresh_token, data.refresh_expires_in));
       window.history.replaceState({}, document.title, "/");
-      window.location.href = '/' + decodeURIComponent(redirectPath.substr(0, redirectPath.indexOf('?'))).replace('//', '/');
+      window.location.href = '/' + sessionStorage.getItem('redirectURI');
     } else {
       throw new Error("Unknown data received");
     }
