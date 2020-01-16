@@ -61,6 +61,11 @@ export const authLogin = (isAuthenticated) => {
         authUserInfo(authTokenVal)(dispatch);
         setupAuthCheck(refreshTokenVal, getRefreshTokenExpiration())(dispatch);
         dispatch(authLoginSucceeded(authTokenVal, 0, refreshTokenVal, 0));
+        var redirectURI = sessionStorage.getItem('redirectURI');
+        if (redirectURI != null) {
+          window.location.href = '/' + redirectURI;
+          sessionStorage.clear();
+        }
       } else {
         saveRedirectURI();
 
@@ -125,8 +130,8 @@ const authToken = (code) => (dispatch) => {
       dispatch(authLoginSucceeded(data.access_token, data.expires_in, data.refresh_token, data.refresh_expires_in));
       window.history.replaceState({}, document.title, "/");
       var redirectURI = sessionStorage.getItem('redirectURI');
-      sessionStorage.clear();
       window.location.href = '/' + (redirectURI == null ? '#/' : redirectURI);
+      sessionStorage.clear();
     } else {
       throw new Error("Unknown data received");
     }
