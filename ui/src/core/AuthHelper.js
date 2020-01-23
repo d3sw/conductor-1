@@ -23,12 +23,9 @@ const refreshExpirationDateKey = "REFRESH_EXPIRATION_DATE";
 
 const ROOT_REDIRECT_URL = '#/';
 
-export const USER_ROLE_ADMIN = 'deluxe.conductor-ui.admin';
-export const USER_ROLE_DEVELOPER = 'deluxe.conductor-ui.developer';
-
 export const USER_AUTHORIZED_ROLES = [
-  USER_ROLE_ADMIN,
-  USER_ROLE_DEVELOPER
+  'deluxe.conductor-ui.admin',
+  'deluxe.conductor-ui.developer'
 ];
 
 export const USER_AUTHORIZED_ROLES_SET = new Set(USER_AUTHORIZED_ROLES);
