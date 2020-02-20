@@ -29,7 +29,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
@@ -43,22 +42,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * @author Oleksiy Lysak
  */
 public class DeluxeAuroraAppender extends AppenderSkeleton {
-	private static final String CREATE_INDEX = "create index log4j_logs_log_time_idx on log4j_logs (log_time)";
-
-	private static final String CREATE_TABLE = "create table log4j_logs(\n" +
-		"  id       serial primary key,\n" +
-		"  log_time timestamp,\n" +
-		"  logger   text,\n" +
-		"  level    text,\n" +
-		"  owner    text,\n" +
-		"  hostname text,\n" +
-		"  fromhost text,\n" +
-		"  message  text,\n" +
-		"  stack    text\n" +
-		")";
-
 	private static final String INSERT_QUERY = "INSERT INTO log4j_logs " +
-		"(log_time, logger, level, owner, hostname, fromhost, message, stack) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+		"(log_time, logger, level, owner, hostname, fromhost, message, stack, alloc_id, trace_id, span_id) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	private LinkedBlockingDeque<LogEntry> buffer = new LinkedBlockingDeque<>();
 	private AtomicBoolean initialized = new AtomicBoolean(false);
@@ -66,6 +52,7 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 	private DataSource dataSource;
 	private String hostname;
 	private String fromhost;
+	private String allocId;
 	private String url;
 	private String user;
 	private String password;
@@ -74,6 +61,7 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 		super();
 		hostname = getHostName();
 		fromhost = getHostIp();
+		allocId = System.getenv("NOMAD_ALLOC_ID");
 		execs = Executors.newScheduledThreadPool(1);
 		execs.scheduleWithFixedDelay(this::flush, 500, 100, TimeUnit.MILLISECONDS);
 	}
@@ -90,6 +78,8 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 			Throwable throwable = event.getThrowableInformation().getThrowable();
 			entry.stack = throwable2String(throwable);
 		}
+		entry.traceId = (String)event.getMDC("dd.trace_id");
+		entry.spanId = (String)event.getMDC("dd.span_id");
 		buffer.add(entry);
 	}
 
@@ -110,9 +100,6 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 
 				dataSource = new HikariDataSource(poolConfig);
 			}
-
-			execute(CREATE_TABLE);
-			execute(CREATE_INDEX);
 
 			initialized.set(true);
 		} catch (Exception ex) {
@@ -139,6 +126,9 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 				st.setString(6, fromhost);
 				st.setString(7, entry.message);
 				st.setString(8, entry.stack);
+				st.setString(9, allocId);
+				st.setString(10, entry.traceId);
+				st.setString(11, entry.spanId);
 				st.execute();
 
 				// Get the next
@@ -184,16 +174,6 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 
 	public String getPassword() {
 		return password;
-	}
-
-	private void execute(String ddl) {
-		try (Connection tx = dataSource.getConnection(); CallableStatement st = tx.prepareCall(ddl);) {
-			st.execute();
-		} catch (Exception ex) {
-			if (!ex.getMessage().contains("already exists")) {
-				System.out.println("DeluxeAuroraAppender.execute failed " + ex.getMessage() + ", stack=" + throwable2String(ex));
-			}
-		}
 	}
 
 	private String normalizeMessage(String message) {
@@ -246,5 +226,7 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 		String owner;
 		String message;
 		String stack;
+		String traceId;
+		String spanId;
 	}
 }

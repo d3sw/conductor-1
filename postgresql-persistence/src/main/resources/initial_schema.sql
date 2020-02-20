@@ -8,7 +8,10 @@ create table log4j_logs
     hostname text,
     fromhost text,
     message  text,
-    stack    text
+    stack    text,
+    alloc_id text,
+    trace_id text,
+    span_id text
 );
 create index log4j_logs_log_time_idx on log4j_logs (log_time);
 
@@ -80,6 +83,23 @@ create table meta_event_handler
     active      boolean      not null,
     json_data   text         not null
 );
+
+CREATE SEQUENCE meta_error_registry_id_seq;
+
+CREATE TABLE meta_error_registry
+(
+    id INTEGER DEFAULT nextval('meta_error_registry_id_seq'::regclass) NOT NULL,
+    error_code TEXT NOT NULL,
+    lookup TEXT NOT NULL,
+    workflow_name TEXT,
+    general_message TEXT,
+    root_cause TEXT,
+    resolution TEXT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (error_code),
+    UNIQUE (lookup, workflow_name)
+);
+
 
 -- ----------------------------------------------------------------------------------------------------------------
 -- schema for execution dao
