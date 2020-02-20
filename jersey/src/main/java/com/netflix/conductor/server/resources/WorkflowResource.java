@@ -77,7 +77,7 @@ public class WorkflowResource {
 		this.service = service;
 		this.metadata = metadata;
 		this.maxSearchSize = config.getIntProperty("workflow.max.search.size", 5_000);
-		this.auth_referer_bypass = Boolean.parseBoolean(config.getProperty("workflow.auth.referer.bypass", "true"));
+		this.auth_referer_bypass = Boolean.parseBoolean(config.getProperty("workflow.auth.referer.bypass", "false"));
 	}
 
 	private String handleCorrelationId(String workflowId, HttpHeaders headers,
