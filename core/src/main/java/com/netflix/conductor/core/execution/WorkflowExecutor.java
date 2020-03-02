@@ -1037,10 +1037,11 @@ public class WorkflowExecutor {
 		}
 
 		if (task.getStatus().isTerminal()) {
+			String queueName = QueueUtils.getQueueName(task);
 			// Also, need to remove all similar which still scheduled
 			List<String> taskIds = edao.getScheduledTasks(workflowId, task.getReferenceTaskName());
 			// Task was already updated....
-			queue.remove(QueueUtils.getQueueName(task), result.getTaskId());
+			queue.remove(queueName, result.getTaskId());
 			String msg = "Task is already completed as " + task.getStatus() + "@" + task.getEndTime() +
 				", workflow status=" + wf.getStatus() + ",workflowId=" + wf.getWorkflowId() +
 				",taskId=" + task.getTaskId()+",correlationId="+wf.getCorrelationId() +
@@ -1048,7 +1049,7 @@ public class WorkflowExecutor {
 				",scheduled=" + taskIds;
 			logger.debug(msg);
 			Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), task.getStatus());
-			taskIds.forEach(id -> queue.remove(QueueUtils.getQueueName(task), id));
+			taskIds.forEach(id -> queue.remove(queueName, id));
 			return;
 		}
 
