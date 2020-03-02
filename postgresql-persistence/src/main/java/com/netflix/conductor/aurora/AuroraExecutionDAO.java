@@ -498,11 +498,11 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 
 	@Override
 	public List<String> getScheduledTasks(String workflowId, String taskRefName) {
-		final String QUERY = "SELECT task_id FROM task_scheduled WHERE workflow_id = ? AND task_key LIKE ?";
-		return queryWithTransaction(QUERY, q -> q
+		String SQL = "SELECT task_id FROM task_scheduled WHERE workflow_id = ? AND task_key LIKE ?";
+		return queryWithTransaction(SQL, q -> q
 			.addParameter(workflowId)
-			.addParameter(taskRefName + "%"))
-			.executeScalarList(String.class);
+			.addParameter(taskRefName + "%")
+			.executeScalarList(String.class));
 	}
 
 	@Override
