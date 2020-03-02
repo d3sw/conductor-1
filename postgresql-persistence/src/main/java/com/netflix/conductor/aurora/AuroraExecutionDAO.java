@@ -492,8 +492,17 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 	 */
 	@Override
 	public boolean anyRunningWorkflowsByTags(Set<String> tags) {
-		String SQL = "select count(*) from workflow where tags @> ?";
+		String SQL = "SELECT count(*) FROM workflow WHERE tags @> ?";
 		return queryWithTransaction(SQL, q -> q.addParameter(tags).executeScalar(Long.class) > 0);
+	}
+
+	@Override
+	public List<String> getScheduledTasks(String workflowId, String taskRefName) {
+		final String QUERY = "SELECT task_id FROM task_scheduled WHERE workflow_id = ? AND task_key LIKE ? ORDER BY id DESC";
+		return queryWithTransaction(QUERY, q -> q
+			.addParameter(workflowId)
+			.addParameter(taskRefName + "%"))
+			.executeScalarList(String.class);
 	}
 
 	@Override

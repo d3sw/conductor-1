@@ -314,4 +314,8 @@ public interface ExecutionDAO {
 	public default void removeTask(Task task) {
 		throw new IllegalStateException("Not implemented");
 	}
+
+	public default List<String> getScheduledTasks(String workflowId, String taskRefName) {
+		throw new IllegalStateException("Not implemented");
+	}
 }
