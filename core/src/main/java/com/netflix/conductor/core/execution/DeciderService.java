@@ -29,6 +29,7 @@ import com.netflix.conductor.common.metadata.workflow.*;
 import com.netflix.conductor.common.metadata.workflow.WorkflowTask.Type;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.Workflow.WorkflowStatus;
+import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.events.ScriptEvaluator;
 import com.netflix.conductor.core.utils.IDGenerator;
 import com.netflix.conductor.dao.MetadataDAO;
@@ -60,11 +61,14 @@ public class DeciderService {
 	private ObjectMapper om;
 	
 	private ParametersUtils pu = new ParametersUtils();
+
+	private boolean tasksAutoCleanup;
 		
 	@Inject
-	public DeciderService(MetadataDAO metadata, ObjectMapper om) {
+	public DeciderService(MetadataDAO metadata, ObjectMapper om, Configuration config) {
 		this.metadata = metadata;
 		this.om = om;
+		tasksAutoCleanup = Boolean.parseBoolean(config.getProperty("workflow.system.task.auto.cleanup", "true"));
 	}
 
 	public DeciderOutcome decide(Workflow workflow, WorkflowDef def) throws TerminateWorkflow {
@@ -86,13 +90,13 @@ public class DeciderService {
 		DeciderOutcome outcome = new DeciderOutcome();
 		
 		if (workflow.getStatus().equals(WorkflowStatus.PAUSED)) {
-			logger.debug("Workflow " + workflow.getWorkflowId() + ",correlationId=" + workflow.getCorrelationId() + " is paused");
+			logger.debug("Workflow " + workflow.getWorkflowId() + ",correlationId=" + workflow.getCorrelationId() + ",traceId=" + workflow.getTraceId() + " is paused");
 			return outcome;
 		}
 		
 		if (workflow.getStatus().isTerminal()) {
 			//you cannot evaluate a terminal workflow
-			logger.debug("Workflow " + workflow.getWorkflowId() + ",correlationId=" + workflow.getCorrelationId() + " is already finished. status=" + workflow.getStatus() + ",reason=" + workflow.getReasonForIncompletion() + ",contextUser=" + workflow.getContextUser());
+			logger.debug("Workflow " + workflow.getWorkflowId() + ",correlationId=" + workflow.getCorrelationId() + ",traceId=" + workflow.getTraceId() + " is already finished. status=" + workflow.getStatus() + ",reason=" + workflow.getReasonForIncompletion() + ",contextUser=" + workflow.getContextUser());
 			return outcome;
 		}
 		
@@ -133,6 +137,16 @@ public class DeciderService {
 					tasksToBeScheduled.put(rt.getReferenceTaskName(), rt);
 					executedTaskRefNames.remove(rt.getReferenceTaskName());
 					outcome.tasksToBeUpdated.add(task);
+					if (tasksAutoCleanup) {
+						outcome.tasksToBeDeleted = workflow.getTasks().stream()
+							.filter(t -> t.getReferenceTaskName().equalsIgnoreCase(task.getReferenceTaskName())
+								&& t.getRetryCount() != 0 // Keep original
+								&& t.getRetryCount() < task.getRetryCount()) // Keep last failed
+							.collect(Collectors.toList());
+						if (!outcome.tasksToBeDeleted.isEmpty()) {
+							logger.debug("Tasks to be deleted " + outcome.tasksToBeDeleted);
+						}
+					}
 				}
 			}
 
@@ -162,7 +176,10 @@ public class DeciderService {
 	
 	private List<Task> startWorkflow(Workflow workflow, WorkflowDef def) throws TerminateWorkflow {
 
-		logger.debug("Starting workflow " + def.getName() + "/" + workflow.getWorkflowId() + ",correlationId=" + workflow.getCorrelationId() + ",contextUser=" + workflow.getContextUser());
+		logger.debug("Starting workflow " + def.getName() + "/" + workflow.getWorkflowId()
+			+ ",correlationId=" + workflow.getCorrelationId()
+			+ ",traceId=" + workflow.getTraceId()
+			+ ",contextUser=" + workflow.getContextUser());
 		
 		List<Task> tasks = workflow.getTasks();
 		// Check if the workflow is a re-run case
@@ -245,7 +262,10 @@ public class DeciderService {
 		}
 
 		if (noPendingTasks && noPendingSchedule) {
-			logger.warn("Workflow might have a stuck state. workflowId=" + workflow.getWorkflowId() + ",correlationId=" + workflow.getCorrelationId() + ",contextUser=" + workflow.getContextUser());
+			logger.warn("Workflow might have a stuck state. workflowId=" + workflow.getWorkflowId()
+				+ ",correlationId=" + workflow.getCorrelationId()
+				+ ",traceId=" + workflow.getTraceId()
+				+ ",contextUser=" + workflow.getContextUser());
 		}
 
 		return false;
@@ -477,6 +497,12 @@ public class DeciderService {
 				}
 				break;
 			case JOIN:
+				Optional<Task> joinExists = workflow.getTasks().stream()
+					.filter(t -> t.getReferenceTaskName().equalsIgnoreCase(taskToSchedule.getTaskReferenceName()))
+					.findFirst();
+				if (joinExists.isPresent()) {
+					break;
+				}
 				Map<String, Object> joinInput = new HashMap<String, Object>();
 				joinInput.put("joinOn", taskToSchedule.getJoinOn());
 				Task joinTask = SystemTask.JoinTask(workflow, taskId, taskToSchedule, joinInput);
@@ -712,7 +738,9 @@ public class DeciderService {
 		List<Task> tasksToBeScheduled = new LinkedList<>();
 		
 		List<Task> tasksToBeUpdated = new LinkedList<>();
-		
+
+		List<Task> tasksToBeDeleted = new LinkedList<>();
+
 		boolean isComplete;
 
 		private DeciderOutcome() { }

@@ -110,7 +110,7 @@ public class ActionProcessor {
 		Map<String, Object> input = new HashMap<>();
 		input.put("workflowId", taskDetails.getWorkflowId());
 		input.put("taskRefName", taskDetails.getTaskRefName());
-		input.putAll(taskDetails.getOutput());
+		input.putAll(new HashMap<>(taskDetails.getOutput()));
 
 		Map<String, Object> replaced = pu.replace(input, payload);
 		String workflowId = "" + replaced.get("workflowId");
@@ -147,12 +147,15 @@ public class ActionProcessor {
 		try {
 
 			WorkflowDef def = metadata.getWorkflowDef(params.getName(), params.getVersion());
-			Map<String, Object> inputParams = params.getInput();
+			Map<String, Object> inputParams = new HashMap<>(params.getInput());
 			Map<String, Object> workflowInput = pu.replace(inputParams, payload);
 			workflowInput.put("conductor.event.messageId", messageId);
 			workflowInput.put("conductor.event.name", event);
 
-			String id = executor.startWorkflow(def.getName(), def.getVersion(), params.getCorrelationId(), workflowInput, event);
+			String id = executor.startWorkflow(def.getName(), def.getVersion(), workflowInput,
+				params.getCorrelationId(), null, null, event, null,
+				null, null, null, null, null, false);
+
 			op.put("workflowId", id);
 			op.put("conductor.event.success", true);
 

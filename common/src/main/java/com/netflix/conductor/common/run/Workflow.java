@@ -85,6 +85,8 @@ public class Workflow extends Auditable {
 
 	private String contextUser;
 
+	private String clientId;
+
 	private Set<String> tags = new HashSet<>();
 
 	private int restartCount;
@@ -92,6 +94,8 @@ public class Workflow extends Auditable {
 	private int rerunCount;
 
 	private String cancelledBy;
+
+	private String traceId;
 
 	public Workflow(){
 		
@@ -364,6 +368,14 @@ public class Workflow extends Auditable {
 		this.contextUser = contextUser;
 	}
 
+	public String getClientId() {
+		return clientId;
+	}
+
+	public void setClientId(String clientId) {
+		this.clientId = clientId;
+	}
+
 	public Set<String> getTags() {
 		return tags;
 	}
@@ -402,6 +414,14 @@ public class Workflow extends Auditable {
 
 	public void incRerunCount() {
 		this.rerunCount++;
+	}
+
+	public String getTraceId() {
+		return traceId;
+	}
+
+	public void setTraceId(String traceId) {
+		this.traceId = traceId;
 	}
 
 	@Override

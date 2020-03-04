@@ -21,14 +21,13 @@ package com.netflix.conductor.server;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.netflix.conductor.aurora.*;
-import com.netflix.conductor.contribs.AssetModule;
-import com.netflix.conductor.contribs.AuthModule;
-import com.netflix.conductor.contribs.HttpModule;
-import com.netflix.conductor.contribs.ProgressModule;
+import com.netflix.conductor.contribs.*;
 import com.netflix.conductor.contribs.json.JsonJqTransform;
 import com.netflix.conductor.contribs.validation.ValidationTask;
 import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.config.CoreModule;
+import com.netflix.conductor.core.execution.TaskStatusListener;
+import com.netflix.conductor.core.execution.WorkflowStatusListener;
 import com.netflix.conductor.dao.*;
 import com.netflix.conductor.dao.dynomite.DynoProxy;
 import com.netflix.conductor.dao.dynomite.RedisExecutionDAO;
@@ -96,6 +95,7 @@ public class ServerModule extends AbstractModule {
 			bind(QueueDAO.class).to(Elasticsearch6RestQueueDAO.class);
 			bind(MetricsDAO.class).to(Elasticsearch6RestMetricsDAO.class);
 			bind(IndexDAO.class).to(Elasticsearch6RestIndexDAO.class);
+			bind(ErrorLookupDAO.class).to(Elasticsearch6ErrorLookupDAO.class);
 		} else if (ConductorServer.DB.aurora.equals(db)) {
 			install(new AuroraModule());
 
@@ -104,6 +104,7 @@ public class ServerModule extends AbstractModule {
 			bind(QueueDAO.class).to(AuroraQueueDAO.class);
 			bind(MetricsDAO.class).to(AuroraMetricsDAO.class);
 			bind(IndexDAO.class).to(AuroraIndexDAO.class);
+			bind(ErrorLookupDAO.class).to(AuroraErrorLookupDAO.class);
 		} else {
 			String localDC = localRack.replaceAll(region, "");
 			DynoShardSupplier ss = new DynoShardSupplier(hs, region, localDC);
@@ -118,20 +119,23 @@ public class ServerModule extends AbstractModule {
 			bind(QueueDAO.class).to(DynoQueueDAO.class);
 		}
 
-		install(new CoreModule());
-		install(new JerseyModule());
-		install(new HttpModule());
-		install(new AuthModule());
-		install(new AssetModule());
-		install(new ProgressModule());
-		new JsonJqTransform();
-		new ValidationTask();
 		List<AbstractModule> additionalModules = config.getAdditionalModules();
 		if (additionalModules != null) {
 			for (AbstractModule additionalModule : additionalModules) {
 				install(additionalModule);
 			}
 		}
+		install(new CoreModule());
+		install(new JerseyModule());
+		install(new HttpModule());
+		install(new AuthModule());
+		install(new AssetModule());
+		install(new ProgressModule());
+		install(new TaskUpdateModule());
+		new JsonJqTransform();
+		new ValidationTask();
+		bind(TaskStatusListener.class).to(StatusEventPublisher.class);
+		bind(WorkflowStatusListener.class).to(StatusEventPublisher.class);
 	}
 
 	@Provides

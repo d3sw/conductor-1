@@ -15,10 +15,12 @@ public class KeyValueLayout extends Layout {
     private DateTimeFormatter dateTime = ISODateTimeFormat.dateTime().withZoneUTC();
     private String hostname;
     private String fromhost;
+    private String allocId;
 
     public KeyValueLayout() {
         hostname = getHostName();
         fromhost = getHostIp();
+        allocId = System.getenv("NOMAD_ALLOC_ID");
     }
 
     @Override
@@ -32,6 +34,9 @@ public class KeyValueLayout extends Layout {
         buf.append("severity=").append(event.getLevel().toString().toLowerCase()).append(" ");
         buf.append("logger=").append(event.getLoggerName()).append(" ");
         buf.append("owner=").append(event.getNDC()).append(" ");
+        buf.append("allocId=").append(allocId).append(" ");
+        buf.append("dd-trace-id=").append(event.getMDC("dd.trace_id")).append(" ");
+        buf.append("dd-span-Id=").append(event.getMDC("dd.span_id")).append(" ");
         buf.append("text=").append("\"").append(normalizeMessage(event.getMessage())).append("\"");
         if (event.getThrowableInformation() != null
                 && event.getThrowableInformation().getThrowable() != null) {

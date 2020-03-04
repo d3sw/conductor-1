@@ -7,8 +7,10 @@ import com.netflix.conductor.common.metadata.events.EventHandler;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.config.Configuration;
+import com.netflix.conductor.core.execution.ParametersUtils;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.dao.MetricsDAO;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
@@ -58,23 +60,21 @@ public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
 		"deluxe.conductor.workflow.update"
 	);
 
-	private static final List<String> WORKFLOWS = Arrays.asList(
-		"deluxe.dependencygraph.conformancegroup.delivery.process", // Conformance Group
-		"deluxe.dependencygraph.assembly.conformancegroup.process", // Sherlock V1 Assembly Conformance
-		"deluxe.dependencygraph.sourcewait.process",                // Sherlock V2 Sourcewait
-		"deluxe.dependencygraph.execute.process",                   // Sherlock V2 Execute
-		"deluxe.deluxeone.sky.compliance.process",                  // Sky Compliance
-		"deluxe.delivery.itune.process"                             // iTune
-	);
-
 	private static final String VERSION = "\\.\\d+\\.\\d+"; // covers '.X.Y' where X and Y any number/digit
 	private static final String PREFIX = "deluxe.conductor";
+	private static ParametersUtils pu = new ParametersUtils();
+	private final List<String> WORKFLOWS;
 	private MetadataDAO metadataDAO;
 
 	@Inject
 	public AuroraMetricsDAO(DataSource dataSource, ObjectMapper mapper, MetadataDAO metadataDAO, Configuration config) {
 		super(dataSource, mapper);
 		this.metadataDAO = metadataDAO;
+		String workflows = config.getProperty("aurora_metrics_main_workflows", "");
+		if (StringUtils.isEmpty(workflows)) {
+			logger.warn("No 'aurora_metrics_main_workflows' parameter defined");
+		}
+		WORKFLOWS = Arrays.asList(workflows.split(","));
 	}
 
 	@Override
@@ -109,30 +109,37 @@ public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
 					futures.add(pool.submit(() -> workflowAverage(metrics, today, shortName, filtered)));
 				}
 
-				// Task type/refName/status counter
-				futures.add(pool.submit(() -> taskTypeRefNameCounters(metrics, today)));
-
-				// Task type/refName average
-				futures.add(pool.submit(() -> taskTypeRefNameAverage(metrics, today)));
+//				// Task type/refName/status counter
+//				futures.add(pool.submit(() -> taskTypeRefNameCounters(metrics, today)));
+//
+//				// Task type/refName average
+//				futures.add(pool.submit(() -> taskTypeRefNameAverage(metrics, today)));
+//
+				// Task type counter
+				futures.add(pool.submit(() -> taskTypeCounters(metrics, today)));
 
 				// Event received
 				futures.add(pool.submit(() -> eventReceived(metrics, today)));
 
 				// Event published
-				futures.add(pool.submit(() -> eventPublished(metrics, today)));
+//				futures.add(pool.submit(() -> eventPublished(metrics, today)));
 
 				// Event execution
-				futures.add(pool.submit(() -> eventExecAverage(metrics, today)));
+				//futures.add(pool.submit(() -> eventExecAverage(metrics, today)));
 
 				// Event wait
-				futures.add(pool.submit(() -> eventWaitAverage(metrics, today)));
+//				futures.add(pool.submit(() -> eventWaitAverage(metrics, today)));
 			}
+
+			// Get the average execution time for execute event workflow based on each action
+			futures.add(pool.submit(() -> execWorkflowActionAverage(metrics)));
 
 			// Admin counters
 			futures.add(pool.submit(() -> adminCounters(metrics)));
 
 			// Wait until completed
 			waitCompleted(futures);
+
 		} finally {
 			pool.shutdown();
 		}
@@ -245,6 +252,30 @@ public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
 
 	@Override
 	public Map<String, Object> getTaskCounters() {
+		Map<String, AtomicLong> metrics = new ConcurrentHashMap<>();
+
+		// Using ExecutorService to process in parallel
+		ExecutorService pool = Executors.newCachedThreadPool();
+		try {
+			List<Future<?>> futures = new LinkedList<>();
+
+			// today
+			futures.add(pool.submit(() -> taskTypeCounters(metrics, true)));
+
+			// overall
+			futures.add(pool.submit(() -> taskTypeCounters(metrics, false)));
+
+			// Wait until completed
+			waitCompleted(futures);
+		} finally {
+			pool.shutdown();
+		}
+
+		return new HashMap<>(metrics);
+	}
+
+	@Override
+	public Map<String, Object> getTaskRefNameCounters() {
 		Map<String, AtomicLong> metrics = new ConcurrentHashMap<>();
 
 		// Using ExecutorService to process in parallel
@@ -375,6 +406,7 @@ public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
 	private Set<String> getSubjects() {
 		return getHandlers().stream()
 			.map(eh -> eh.getEvent().split(":")[1]) // 0 - event bus, 1 - subject, 2 - queue
+			.map(event -> pu.replace(event).toString())
 			.collect(Collectors.toSet());
 	}
 
@@ -695,14 +727,61 @@ public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
 		});
 	}
 
+    private void taskTypeCounters(Map<String, AtomicLong> map, boolean today) {
+        withTransaction(tx -> {
+            ResultSetHandler<Object> handler = rs -> {
+                while (rs.next()) {
+                    String typeName = rs.getString("task_type").toLowerCase();
+                    String status = rs.getString("task_status").toLowerCase();
+                    long count = rs.getLong("count");
+
+                    // Init counters. Total per typeName + today/non-today
+                    initMetric(map, String.format("%s.task_%s", PREFIX, typeName));
+                    initMetric(map, String.format("%s.task_%s_today", PREFIX, typeName));
+
+                    // Init counters. Per typeName/status + today/non-today
+                    for (String statusName : TASK_STATUSES) {
+                        initMetric(map, String.format("%s.task_%s_%s", PREFIX, typeName, statusName.toLowerCase()));
+                        initMetric(map, String.format("%s.task_%s_%s_today", PREFIX, typeName, statusName.toLowerCase()));
+                    }
+
+                    // Parent typeName
+                    String metricName = String.format("%s.task_%s%s", PREFIX, typeName, toLabel(today));
+                    map.get(metricName).addAndGet(count);
+
+                    // typeName + status
+                    metricName = String.format("%s.task_%s_%s%s", PREFIX, typeName, status, toLabel(today));
+                    map.get(metricName).addAndGet(count);
+                }
+                return null;
+            };
+
+            StringBuilder SQL = new StringBuilder("SELECT task_type, task_status, count(*) as count ");
+            SQL.append("FROM task WHERE task_type = ANY(?) AND task_status = ANY(?) ");
+            if (today) {
+                SQL.append("AND start_time >= ? ");
+                SQL.append("GROUP BY task_type, task_status");
+
+                query(tx, SQL.toString(), q -> q.addParameter(TASK_TYPES).addParameter(TASK_STATUSES)
+                        .addTimestampParameter(getStartTime())
+                        .executeAndFetch(handler));
+            } else {
+                SQL.append("GROUP BY task_type, task_status");
+
+                query(tx, SQL.toString(), q -> q.addParameter(TASK_TYPES).addParameter(TASK_STATUSES)
+                        .executeAndFetch(handler));
+            }
+        });
+    }
+
 	private void workflowAverage(Map<String, AtomicLong> map, boolean today, String shortName, Set<String> filtered) {
 		withTransaction(tx -> {
 			ResultSetHandler<Object> handler = rs -> {
 				while (rs.next()) {
 					long avg = rs.getLong("avg");
 
-					String metricName = String.format("%s.avg_workflow_execution_sec%s.%s", PREFIX, toLabel(today), shortName);                    // Se the correct one
-					map.put(metricName, new AtomicLong(avg / 1000));
+					String metricName = String.format("%s.avg_workflow_execution_msec%s.%s", PREFIX, toLabel(today), shortName);                    // Se the correct one
+					map.put(metricName, new AtomicLong(avg));
 				}
 				return null;
 			};
@@ -720,6 +799,28 @@ public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
 				query(tx, SQL.toString(), q -> q.addParameter(filtered)
 					.executeAndFetch(handler));
 			}
+		});
+	}
+
+
+	private void execWorkflowActionAverage(Map<String, AtomicLong> map) {
+		withTransaction(tx -> {
+			ResultSetHandler<Object> handler = rs -> {
+				while (rs.next()) {
+					long avg = rs.getLong("avg_time_taken");
+					String metricName = String.format("%s.avg_execproc_workflow_msec%s.%s", PREFIX, toLabel(true), rs.getString("action_type"));
+					map.put(metricName, new AtomicLong(avg));
+				}
+				return null;
+			};
+
+            StringBuilder SQL = new StringBuilder("SELECT input::json->>'action' as action_type, avg(extract('epoch' from end_time) - extract('epoch' from start_time)) as avg_time_taken ");
+            SQL.append("FROM workflow WHERE start_time IS NOT NULL AND end_time IS NOT NULL ");
+			SQL.append("AND workflow_type like 'deluxe.dependencygraph.execute.process%' AND workflow_status = 'COMPLETED' ");
+			SQL.append("AND start_time >= ? ");
+			SQL.append("group by input::json->>'action' ");
+
+			query(tx, SQL.toString(), q -> q.addTimestampParameter(getStartTime()).executeAndFetch(handler));
 		});
 	}
 
