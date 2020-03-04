@@ -387,10 +387,10 @@ dateChangeFrom(e){
                        &nbsp;<i className="fa fa-angle-up fa-1x"></i>&nbsp;&nbsp;<label className="small nobold">To Date</label>
 
                   </Col>
-                    <Col md={2}>
-                         <Button bsSize="small" bsStyle="success" onClick={this.clearBtnClick}>&nbsp;&nbsp;Clear date range</Button> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                          <Button bsSize="small" bsStyle="success" onClick={this.exportcsv}>Export Report</Button>
-                         &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<Button bsSize="medium" bsStyle="success" onClick={this.searchBtnClick} className="fa fa-search search-label">&nbsp;&nbsp;Search</Button>
+                    <Col md={3}>
+                         <Button bsSize="small" bsStyle="success" onClick={this.clearBtnClick}>&nbsp;&nbsp;Clear date range</Button> &nbsp;&nbsp;
+                          <Button bsSize="small" bsStyle="success" onClick={this.exportcsv}>Export Report</Button>&nbsp;&nbsp;
+                          <Button bsSize="medium" bsStyle="success" onClick={this.searchBtnClick} className="fa fa-search search-label">&nbsp;&nbsp;Search</Button>
                      </Col>
              </Row>
           </Grid>
