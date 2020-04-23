@@ -1445,7 +1445,6 @@ public class WorkflowExecutor {
 				workflow.getCorrelationId(), workflow.getTraceId(), workflow.getContextUser(), workflow.getClientId());
 
 			queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000);
-			task.setStarted(true);
 			if (task.getStartTime() == 0) {
 				task.setStartTime(System.currentTimeMillis());
 				Monitors.recordQueueWaitTime(task.getTaskDefName(), task.getQueueWaitTime());
@@ -1459,6 +1458,7 @@ public class WorkflowExecutor {
 					try {
 						taskStatusListener.onTaskStarted(task);
 						systemTask.start(workflow, task, this);
+						task.setStarted(true);
 					} catch (Exception ex) {
 						task.setStatus(Status.FAILED);
 						task.setReasonForIncompletion(ex.getMessage());
