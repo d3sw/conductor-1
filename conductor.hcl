@@ -103,7 +103,7 @@ job "conductor" {
         memory = 128 # MB
 
         network {
-          mbits = 4
+          mbits = 100
           port  "http"{}
         }
       }
