@@ -17,8 +17,8 @@ public class TitleKeysV2ActionCondition implements JavaEventCondition {
 		Object seriesVersionId = ScriptEvaluator.evalJqAsObject(".data.titleKeys.seriesVersionId", payload);
 		Object seasonVersionId = ScriptEvaluator.evalJqAsObject(".data.titleKeys.seasonVersionId", payload);
 		Object function = ScriptEvaluator.evalJqAsObject(".data.function", payload);
-		return ((Objects.nonNull(featureId) && Objects.nonNull(function) && "Source".equals(function)) || (Objects.nonNull(seasonId) && Objects.nonNull(episodeId) && Objects.nonNull(seriesId) && Objects.nonNull(function) && "Source".equals(function)) ||
-				(Objects.nonNull(franchiseId) && Objects.nonNull(franchiseVersionId) && Objects.nonNull(function) && "Source".equals(function)) || (Objects.nonNull(seriesId) && Objects.nonNull(seriesVersionId) && Objects.nonNull(function) && "Source".equals(function)) ||
-				(Objects.nonNull(seasonId) && Objects.nonNull(seasonVersionId) && Objects.nonNull(function) && "Source".equals(function)));
+		return ((Objects.nonNull(featureId) && Objects.nonNull(function)) || (Objects.nonNull(seasonId) && Objects.nonNull(episodeId) && Objects.nonNull(seriesId) && Objects.nonNull(function)) ||
+				(Objects.nonNull(franchiseId) && Objects.nonNull(franchiseVersionId) && Objects.nonNull(function)) || (Objects.nonNull(seriesId) && Objects.nonNull(seriesVersionId) && Objects.nonNull(function)) ||
+				(Objects.nonNull(seasonId) && Objects.nonNull(seasonVersionId) && Objects.nonNull(function)));
 	}
 }
