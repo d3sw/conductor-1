@@ -19,6 +19,7 @@
 package com.netflix.conductor.contribs.queue.shotgun;
 
 import com.bydeluxe.onemq.OneMQClient;
+import com.bydeluxe.onemq.Priority;
 import com.bydeluxe.onemq.PublishOptions;
 import com.bydeluxe.onemq.Subscription;
 import com.netflix.conductor.core.events.EventQueues;
@@ -153,8 +154,9 @@ public class SharedShotgunQueue implements ObservableQueue {
             String payload = message.getPayload();
             try {
                 PublishOptions options = PublishOptions.newBuilder()
+                    .withPriority(getShotgunPriority(message.getPriority()))
                     .withHeaders(message.getHeaders())
-                    .withTraceId(message.getTraceId())
+                    .withTraceId(message.getTraceId() != null ? message.getTraceId() : "")
                     .withDelays(publishRetryIn)
                     .withClientId(service)
                     .build();
@@ -196,30 +198,50 @@ public class SharedShotgunQueue implements ObservableQueue {
         NDC.push("event-" + uuid);
         try {
             String payload = message.getContent().toStringUtf8();
+            String traceId = message.getHeadersOrDefault("platform-trace-id", "");
 
             Message dstMsg = new Message();
             dstMsg.setId(uuid);
             dstMsg.setReceipt(message.getID());
             dstMsg.setPayload(payload);
             dstMsg.setReceived(System.currentTimeMillis());
-            dstMsg.setTraceId(message.getTraceID());
+            dstMsg.setTraceId(traceId);
 
-            logger.info(String.format("ShotgunMsg: Received message for %s/%s/%s %s=%s",
-                subscription.getSubject(), subscription.getGroupID(), message.getTraceID(), dstMsg.getId(), payload));
+            logger.info(String.format("Received message for %s/%s/%s %s=%s",
+                subscription.getSubject(), subscription.getGroupID(), traceId, dstMsg.getId(), payload));
 
             if (handler != null) {
                 handler.apply(this, dstMsg);
             } else {
                 ack(Collections.singletonList(dstMsg));
                 logger.debug("No handler - ack " + dstMsg.getReceipt());
-                logger.info("ShotgunMsg:q: ACKing Message - No Handler " + dstMsg.getReceipt());
+                //logger.info("ShotgunMsg:q: ACKing Message - No Handler " + dstMsg.getReceipt());
             }
         } catch (Exception ex) {
             logger.debug("onMessage failed " + ex.getMessage(), ex);
-            logger.info("ShotgunMsg:q: UNACK Message.. Exception" + ex.getMessage(), ex);
+            //logger.info("ShotgunMsg:q: UNACK Message.. Exception" + ex.getMessage(), ex);
             unack(message.getID());
         } finally {
             NDC.remove();
         }
     }
+
+    private Priority getShotgunPriority(int priority){
+
+        switch(priority){
+            case 1:
+                return Priority.Lightning;
+            case 2:
+                return Priority.Urgent;
+            case 3: case 4:
+                return Priority.High;
+            case 5: case 6: case 7: case 8:
+                return Priority.Normal;
+            case 9: case 10:
+                return Priority.Low;
+            default:
+                return Priority.Undefined;
+        }
+    }
+
 }

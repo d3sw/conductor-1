@@ -38,6 +38,7 @@ import javax.inject.Inject;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * @author Viren
@@ -74,6 +75,7 @@ public class Event extends WorkflowSystemTask {
 		String payloadJson = om.writeValueAsString(payload);
 		Message message = new Message(task.getTaskId(), payloadJson, task.getTaskId());
 		message.setTraceId(workflow.getTraceId());
+		message.setPriority(getJobPriority(workflow));
 		if (useGroupId) {
 			message.setHeaders(new HashMap<String, String>(){{
 				put("JMSXGroupID", getJMSXGroupId(workflow));
@@ -172,6 +174,15 @@ public class Event extends WorkflowSystemTask {
 			}
 		}
 		return jmsxGroupId;
+	}
+
+	private int getJobPriority(Workflow workflow){
+		String priority = Objects.toString(workflow.getInput().get("jobPriority"), null);
+
+		if ( StringUtils.isNotEmpty(priority)){
+			return Integer.parseInt(priority);
+		}
+		return 5;
 	}
 
 	private String getJobId(String correlationId) {
