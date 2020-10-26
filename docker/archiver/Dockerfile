@@ -1,4 +1,4 @@
-FROM java:8-jre
+FROM java:8-jre-alpine
 
 #RUN apk update && apk add bash
 
