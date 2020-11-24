@@ -11,13 +11,16 @@ import com.netflix.conductor.common.metadata.tasks.TaskDef;
 import com.netflix.conductor.common.metadata.tasks.TaskExecLog;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.events.queue.Message;
+import com.netflix.conductor.core.execution.ApplicationException;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.IndexDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
+import java.io.IOException;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -247,7 +250,7 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 
 	@Override
 	public Task getTask(String workflowId, String taskRefName) {
-		String GET_TASK = "SELECT json_data FROM task WHERE workflow_id = ? and task_refname = ? ORDER BY id DESC";
+		String GET_TASK = "SELECT json_data end_time FROM task WHERE workflow_id = ? and task_refname = ? ORDER BY id DESC";
 		return queryWithTransaction(GET_TASK, q -> q
 			.addParameter(workflowId)
 			.addParameter(taskRefName)
@@ -498,11 +501,14 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 			payload.put("outputData", task.getOutputData());
 		}
 
-		String SQL = "UPDATE task SET json_data = (json_data::jsonb || ?::jsonb)::text WHERE task_id = ?";
+//		String SQL = "UPDATE task SET json_data = (json_data::jsonb || ?::jsonb)::text WHERE task_id = ? AND task_status not in ('CANCELED', 'FAILED', 'COMPLETED', 'COMPLETED_WITH_ERRORS', 'TIMED_OUT', 'SKIPPED', 'RESET', 'FAILED_NO_RETRY')";
+		String SQL = "UPDATE task SET json_data = (json_data::jsonb || ?::jsonb)::text, start_time = ?, end_time = ? WHERE task_id = ? ";
 		executeWithTransaction(SQL, q -> q
-			.addJsonParameter(payload)
-			.addParameter(task.getTaskId())
-			.executeUpdate());
+				.addJsonParameter(payload)
+				.addParameter(task.getStartTime())
+				.addParameter(task.getEndTime())
+				.addParameter(task.getTaskId())
+				.executeUpdate());
 	}
 
 	private List<String> getRunningWorkflowIds(Connection tx, String workflowName) {
@@ -511,8 +517,23 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 	}
 
 	private Task getTask(Connection tx, String taskId) {
-		String GET_TASK = "SELECT json_data FROM task WHERE task_id = ?";
-		return query(tx, GET_TASK, q -> q.addParameter(taskId).executeAndFetchFirst(Task.class));
+		String GET_TASK = "SELECT json_data, start_time, end_time FROM task WHERE task_id = ?";
+		return query(tx, GET_TASK, q ->{
+			ResultSet rs = q.addParameter(taskId).executeQuery();
+			if ( rs.next()){
+				String json = rs.getString("json_data");
+				try {
+					Task task = new ObjectMapper().readValue(json, Task.class);
+					task.setStartTime( rs.getLong("start_time"));
+					task.setEndTime( rs.getLong("end_time"));
+					return task;
+				} catch (IOException ex) {
+					throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR,
+							"Could not convert JSON '" + json + "' to Task.class", ex);
+				}
+			}
+			return null;
+		});
 	}
 
 	private static int dateStr(Long timeInMs) {
