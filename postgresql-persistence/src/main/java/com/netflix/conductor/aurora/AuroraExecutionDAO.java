@@ -250,11 +250,26 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 
 	@Override
 	public Task getTask(String workflowId, String taskRefName) {
-		String GET_TASK = "SELECT json_data end_time FROM task WHERE workflow_id = ? and task_refname = ? ORDER BY id DESC";
-		return queryWithTransaction(GET_TASK, q -> q
-			.addParameter(workflowId)
-			.addParameter(taskRefName)
-			.executeAndFetchFirst(Task.class));
+		String GET_TASK = "SELECT json_data FROM task WHERE workflow_id = ? and task_refname = ? ORDER BY id DESC";
+		return queryWithTransaction(GET_TASK, q->{
+					ResultSet rs = q.addParameter(workflowId)
+							.addParameter(taskRefName)
+							.executeQuery();
+
+					if ( rs.next()){
+						String json = rs.getString("json_data");
+						try {
+							Task task = new ObjectMapper().readValue(json, Task.class);
+							task.setStartTime( rs.getLong("start_time"));
+							task.setEndTime( rs.getLong("end_time"));
+							return task;
+						} catch (IOException ex) {
+							throw new ApplicationException(ApplicationException.Code.BACKEND_ERROR,
+									"Could not convert JSON '" + json + "' to Task.class", ex);
+						}
+					}
+					return null;
+				});
 	}
 
 	@Override
