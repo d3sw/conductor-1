@@ -113,7 +113,7 @@ public class EventProcessor {
 				}).collect(Collectors.toList());
 
 			List<ObservableQueue> created = new LinkedList<>();
-			activeHandlers.paralletStream().forEach(handler -> queuesMap.computeIfAbsent(handler.getEvent(), s -> {
+			activeHandlers.parallelStream().forEach(handler -> queuesMap.computeIfAbsent(handler.getEvent(), s -> {
 				ObservableQueue queue = EventQueues.getQueue(handler.getEvent(), false,
 					handler.isRetryEnabled(), handler.getPrefetchSize(), this::handle);
 				if (queue == null) {
