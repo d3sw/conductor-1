@@ -184,7 +184,7 @@ public class WorkflowExecutor {
 			// Check payload size
 			String payload = om.writeValueAsString(input);
 			if (payload.length() >= MAX_REJECT_SIZE) {
-				throw new ApplicationException(Code.INVALID_INPUT, "Input is too big");
+				throw new ApplicationException(Code.INVALID_INPUT, "Input is too long");
 			} else if (payload.length() >= MAX_ALERT_SIZE) {
 				logger.warn("Workflow payload size exceeds threshold. WorkflowId=" + workflowId
 					+ ",correlationId=" + correlationId + ",contextUser=" + contextUser
