@@ -53,11 +53,11 @@ public class HttpTask extends GenericHttpTask {
 			+ "' key wiht HttpTask.Input as value. See documentation for HttpTask for required input parameters";
 	public static final String NAME = "HTTP";
 	private static final String CONDITIONS_PARAMETER = "conditions";
-	private int unackTimeout;
+	private final int unackTimeout;
 
 	@Inject
-	public HttpTask(RestClientManager rcm, Configuration config, ObjectMapper om, AuthManager auth, ForeignAuthManager foreignAuthManager) {
-		super(NAME, config, rcm, om, auth, foreignAuthManager);
+	public HttpTask(RestClientManager rcm, Configuration config, ObjectMapper om, AuthManager authManager, ForeignAuthManager foreignAuthManager) {
+		super(NAME, config, rcm, om, authManager, foreignAuthManager);
 		unackTimeout = config.getIntProperty("workflow.system.task.http.unack.timeout", 60);
 		logger.debug("HttpTask initialized...");
 	}
