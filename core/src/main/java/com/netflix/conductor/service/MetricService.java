@@ -68,6 +68,14 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
+	public void taskWait(String taskType, Long waitTime) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.task.queue.wait");
+		tags.add("task_type:" + taskType);
+
+		statsd.recordExecutionTime(aspect, waitTime, toArray(tags));
+	}
+
 	public void eventReceived(String subject) {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.event.received");
