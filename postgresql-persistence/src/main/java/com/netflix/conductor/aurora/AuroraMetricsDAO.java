@@ -2,72 +2,22 @@ package com.netflix.conductor.aurora;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.aurora.sql.ResultSetHandler;
-import com.netflix.conductor.common.metadata.events.EventExecution;
-import com.netflix.conductor.common.metadata.tasks.Task;
-import com.netflix.conductor.common.run.Workflow;
-import com.netflix.conductor.core.config.Configuration;
-import com.netflix.conductor.core.execution.ParametersUtils;
-import com.netflix.conductor.dao.MetadataDAO;
+
 import com.netflix.conductor.dao.MetricsDAO;
 import com.netflix.conductor.service.MetricService;
 
 import javax.inject.Inject;
 import javax.sql.DataSource;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class AuroraMetricsDAO extends AuroraBaseDAO implements MetricsDAO {
-	private static final List<String> WORKFLOW_TODAY_STATUSES = Arrays.asList(
-		Workflow.WorkflowStatus.COMPLETED.name(),
-		Workflow.WorkflowStatus.CANCELLED.name(),
-		Workflow.WorkflowStatus.TIMED_OUT.name(),
-		Workflow.WorkflowStatus.RUNNING.name(),
-		Workflow.WorkflowStatus.FAILED.name()
-	);
-	private static final List<String> WORKFLOW_OVERALL_STATUSES = Arrays.asList(
-		Workflow.WorkflowStatus.COMPLETED.name(),
-		Workflow.WorkflowStatus.CANCELLED.name(),
-		Workflow.WorkflowStatus.TIMED_OUT.name(),
-		Workflow.WorkflowStatus.FAILED.name()
-	);
-
-	private static final List<String> TASK_TYPES = Arrays.asList(
-		"WAIT",
-		"HTTP",
-		"BATCH");
-
-	private static final List<String> TASK_STATUSES = Arrays.asList(
-		Task.Status.IN_PROGRESS.name(),
-		Task.Status.COMPLETED.name(),
-		Task.Status.FAILED.name()
-	);
-
-	private static final List<String> EVENT_STATUSES = Arrays.asList(
-		EventExecution.Status.COMPLETED.name(),
-		EventExecution.Status.SKIPPED.name(),
-		EventExecution.Status.FAILED.name()
-	);
-
-	private static final List<String> SINK_SUBJECTS = Arrays.asList(
-		"deluxe.conductor.deluxeone.compliance.workflow.update",
-		"deluxe.conductor.deluxeone.workflow.update",
-		"deluxe.conductor.workflow.update"
-	);
-
-	private static final String VERSION = "\\.\\d+\\.\\d+"; // covers '.X.Y' where X and Y any number/digit
-	private static final String PREFIX = "deluxe.conductor";
-	private static ParametersUtils pu = new ParametersUtils();
-	private MetadataDAO metadataDAO;
-	private final SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-
 
 	@Inject
-	public AuroraMetricsDAO(DataSource dataSource, ObjectMapper mapper, MetadataDAO metadataDAO, Configuration config) {
+	public AuroraMetricsDAO(DataSource dataSource, ObjectMapper mapper) {
 		super(dataSource, mapper);
-		this.metadataDAO = metadataDAO;
 	}
 
 	@Override
