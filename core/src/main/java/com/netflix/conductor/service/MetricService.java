@@ -230,6 +230,7 @@ public class MetricService {
 		tags.add("metric:deluxe.conductor.queue.count");
 		tags.add("queue:" + queue);
 
+		statsd.incrementCounter(aspect, toArray(tags));
 		statsd.recordGaugeValue(aspect, count, toArray(tags));
 	}
 
@@ -238,6 +239,7 @@ public class MetricService {
 		tags.add("metric:deluxe.conductor.workflow.running.count");
 		tags.add("workflow:" + workflow);
 
+		statsd.incrementCounter(aspect, toArray(tags));
 		statsd.recordGaugeValue(aspect, count, toArray(tags));
 	}
 }
