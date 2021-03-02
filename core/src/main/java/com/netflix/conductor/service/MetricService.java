@@ -225,5 +225,19 @@ public class MetricService {
 		statsd.recordExecutionTime(aspect, execTime, toArray(tags));
 	}
 
+	public void queueGauge(String queue, Long count) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.queue.count");
+		tags.add("queue:" + queue);
 
+		statsd.recordGaugeValue(aspect, count, toArray(tags));
+	}
+
+	public void workflowGauge(String workflow, Long count) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.workflow.running.count");
+		tags.add("workflow:" + workflow);
+
+		statsd.recordGaugeValue(aspect, count, toArray(tags));
+	}
 }
