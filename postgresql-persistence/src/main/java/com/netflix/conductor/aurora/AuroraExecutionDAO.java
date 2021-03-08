@@ -462,7 +462,7 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 	 */
 	@Override
 	public boolean anyRunningWorkflowsByTags(Set<String> tags) {
-		String SQL = "SELECT COUNT(*) FROM workflow WHERE workflow_status = 'RUNNING' AND tags && ?";
+		String SQL = "SELECT COUNT(*) FROM workflow WHERE workflow_status IN ('RUNNING','RESET','PAUSED') AND tags && ?";
 		return queryWithTransaction(SQL, q -> q.addParameter(tags).executeScalar(Long.class) > 0);
 	}
 
@@ -573,7 +573,7 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 				.executeUpdate());
 		}
 
-		if (task.getStatus() != null && task.getStatus().isTerminal()) {
+		if (task.isTerminal()) {
 			removeTaskInProgress(tx, task);
 		}
 	}
@@ -624,7 +624,7 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 
 		// We must not delete tags for RESET as it must be restarted right away
 		Set<String> tags;
-		if (workflow.getStatus().isTerminal() && workflow.getStatus() != Workflow.WorkflowStatus.RESET) {
+		if (workflow.getResetTags() || (workflow.getStatus().isTerminal() && workflow.getStatus() != Workflow.WorkflowStatus.RESET)) {
 			tags = Collections.emptySet();
 		} else {
 			tags = workflow.getTags();
