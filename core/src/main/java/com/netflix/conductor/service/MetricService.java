@@ -68,12 +68,29 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
-	public void taskWait(String taskType, Long waitTime) {
+	public void taskWait(String taskType, String refName, Long waitTime) {
 		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.task.queue.wait");
+		tags.add("metric:deluxe.conductor.task.queue.wait.time");
 		tags.add("task_type:" + taskType);
+		tags.add("ref_name:" + refName);
 
 		statsd.recordExecutionTime(aspect, waitTime, toArray(tags));
+	}
+
+	public void taskComplete(String taskType, String refName, String status, long startTime) {
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.task.complete");
+		tagsCounter.add("task_type:" + taskType);
+		tagsCounter.add("ref_name:" + refName);
+		tagsCounter.add("status:" + status);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
+
+		Set<String> tagsTime = new HashSet<>();
+		tagsTime.add("metric:deluxe.conductor.task.complete.time");
+		tagsTime.add("task_type:" + taskType);
+		tagsTime.add("ref_name:" + refName);
+		long execTime = System.currentTimeMillis() - startTime;
+		statsd.recordExecutionTime(aspect, execTime, toArray(tagsTime));
 	}
 
 	public void eventReceived(String subject) {
@@ -112,14 +129,19 @@ public class MetricService {
 	}
 
 	public void eventActionExecuted(String handler, String subject, String actionId, long execTime) {
-		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.event.action.executed");
-		tags.add("handler:" + handler);
-		tags.add("subject:" + subject);
-		tags.add("action:" + actionId);
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.event.action.executed");
+		tagsCounter.add("handler:" + handler);
+		tagsCounter.add("subject:" + subject);
+		tagsCounter.add("action:" + actionId);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
 
-		statsd.incrementCounter(aspect, toArray(tags));
-		statsd.recordExecutionTime(aspect, execTime, toArray(tags));
+		Set<String> tagsTime = new HashSet<>();
+		tagsTime.add("metric:deluxe.conductor.event.action.executed.time");
+		tagsTime.add("handler:" + handler);
+		tagsTime.add("subject:" + subject);
+		tagsTime.add("action:" + actionId);
+		statsd.recordExecutionTime(aspect, execTime, toArray(tagsTime));
 	}
 
 	public void eventActionFailed(String handler, String subject, String actionId) {
@@ -198,13 +220,18 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
-	public void workflowFailure(String name, String status) {
-		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.workflow.failure");
-		tags.add("workflow:" + name);
-		tags.add("status:" + status);
+	public void workflowFailure(String name, String status, long startTime) {
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.workflow.failure");
+		tagsCounter.add("workflow:" + name);
+		tagsCounter.add("status:" + status);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
 
-		statsd.incrementCounter(aspect, toArray(tags));
+		Set<String> tagsTime = new HashSet<>();
+		tagsTime.add("metric:deluxe.conductor.workflow.failure.time");
+		tagsTime.add("workflow:" + name);
+		long execTime = System.currentTimeMillis() - startTime;
+		statsd.recordExecutionTime(aspect, execTime, toArray(tagsTime));
 	}
 
 	public void workflowCancel(String name) {
@@ -224,22 +251,28 @@ public class MetricService {
 	}
 
 	public void workflowComplete(String name, long startTime) {
-		long execTime = System.currentTimeMillis() - startTime;
-		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.workflow.complete");
-		tags.add("workflow:" + name);
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.workflow.complete");
+		tagsCounter.add("workflow:" + name);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
 
-		statsd.incrementCounter(aspect, toArray(tags));
-		statsd.recordExecutionTime(aspect, execTime, toArray(tags));
+		Set<String> tagsTime = new HashSet<>();
+		tagsTime.add("metric:deluxe.conductor.workflow.complete.time");
+		tagsTime.add("workflow:" + name);
+		long execTime = System.currentTimeMillis() - startTime;
+		statsd.recordExecutionTime(aspect, execTime, toArray(tagsTime));
 	}
 
 	public void queueGauge(String queue, Long count) {
-		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.queue.count");
-		tags.add("queue:" + queue);
-
-		statsd.incrementCounter(aspect, toArray(tags));
-		statsd.recordGaugeValue(aspect, count, toArray(tags));
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.queue.count");
+		tagsCounter.add("queue:" + queue);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
+		
+		Set<String> tagsGauge = new HashSet<>();
+		tagsGauge.add("metric:deluxe.conductor.queue.count.gauge");
+		tagsGauge.add("queue:" + queue);
+		statsd.recordGaugeValue(aspect, count, toArray(tagsGauge));
 	}
 
 	public void workflowGauge(String workflow, Long count) {

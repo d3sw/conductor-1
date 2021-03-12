@@ -1006,8 +1006,10 @@ public class WorkflowExecutor {
 		// send wf end message
 		workflowStatusListener.onWorkflowTerminated(workflow);
 
-		// Send to atlas
-		MetricService.getInstance().workflowFailure(workflow.getWorkflowType(), workflow.getStatus().name());
+		// Send to data dog
+		MetricService.getInstance().workflowFailure(workflow.getWorkflowType(),
+			workflow.getStatus().name(),
+			workflow.getStartTime());
 	}
 
 	public QueueDAO getQueueDao() {
@@ -1088,6 +1090,12 @@ public class WorkflowExecutor {
 		} else {
 			edao.updateTask(task);
 		}
+		if (task.isTerminal()) {
+			MetricService.getInstance().taskComplete(task.getTaskDefName(),
+				task.getReferenceTaskName(),
+				task.getStatus().name(),
+				task.getStartTime());
+		}
 
 		result.getLogs().forEach(tl -> tl.setTaskId(task.getTaskId()));
 		edao.addTaskExecLog(result.getLogs());
@@ -1131,19 +1139,6 @@ public class WorkflowExecutor {
 			wakeUpSweeper(workflowId);
 		} else {
 			decide(workflowId);
-		}
-
-		if (task.getStatus().isTerminal()) {
-			long duration = getTaskDuration(0, task);
-			long lastDuration = task.getEndTime() - task.getStartTime();
-			Monitors.recordTaskExecutionTime(task, duration, true);
-			Monitors.recordTaskExecutionTime(task, lastDuration, false);
-			if(task.getStatus().equals(Status.COMPLETED)) {
-				Monitors.recordTasksCompleted(task);
-			}
-			if(task.getStatus().equals(Status.FAILED)) {
-				Monitors.recordTasksFailed(task);
-			}
 		}
 	}
 
@@ -1437,13 +1432,13 @@ public class WorkflowExecutor {
 
 				if (edao.exceedsInProgressLimit(task)) {
 					logger.debug("Concurrent Execution limited for {}:{}", taskId, task.getTaskDefName());
-					queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000);
+					queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000L);
 					return;
 				}
 
 				if (edao.exceedsRateLimitPerFrequency(task)) {
 					logger.debug("RateLimit Execution limited for {}:{}", taskId, task.getTaskDefName());
-					queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000);
+					queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000L);
 					return;
 				}
 			}
@@ -1459,11 +1454,13 @@ public class WorkflowExecutor {
 				task.getTaskType(), task.getTaskId(), task.getStatus(), workflow.getWorkflowId(),
 				workflow.getCorrelationId(), workflow.getTraceId(), workflow.getContextUser(), workflow.getClientId());
 
-			queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000);
+			queue.setUnackTimeout(QueueUtils.getQueueName(task), task.getTaskId(), systemTask.getRetryTimeInSecond() * 1000L);
 			task.setStarted(true);
 			if (task.getStartTime() == 0) {
 				task.setStartTime(System.currentTimeMillis());
-				MetricService.getInstance().taskWait(task.getTaskDefName(), task.getQueueWaitTime());
+				MetricService.getInstance().taskWait(task.getTaskDefName(),
+					task.getReferenceTaskName(),
+					task.getQueueWaitTime());
 			}
 			task.setPollCount(task.getPollCount() + 1);
 			edao.updateTask(task);
