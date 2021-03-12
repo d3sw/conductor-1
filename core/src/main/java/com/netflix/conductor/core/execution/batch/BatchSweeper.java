@@ -194,7 +194,7 @@ public class BatchSweeper {
                 task.setStatus(Task.Status.IN_PROGRESS);
                 if (task.getStartTime() == 0) {
                     task.setStartTime(System.currentTimeMillis());
-                    MetricService.getInstance().taskWait(task.getTaskDefName(),
+                    MetricService.getInstance().taskWait(task.getTaskType(),
                         task.getReferenceTaskName(),
                         task.getQueueWaitTime());
                 }
@@ -221,7 +221,7 @@ public class BatchSweeper {
     private boolean ackTaskReceived(String queueName, String taskId, int responseTimeoutSeconds) {
         if (responseTimeoutSeconds > 0) {
             logger.debug("Adding task " + queueName + "/" + taskId + " to be requeued if no response received " + responseTimeoutSeconds);
-            return queues.setUnackTimeout(queueName, taskId, 1000 * responseTimeoutSeconds); //Value is in millisecond
+            return queues.setUnackTimeout(queueName, taskId, 1000L * responseTimeoutSeconds); //Value is in millisecond
         } else {
             return queues.ack(queueName, taskId);
         }
