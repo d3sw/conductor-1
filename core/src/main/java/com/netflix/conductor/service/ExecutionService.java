@@ -113,6 +113,10 @@ public class ExecutionService {
 		String queueName = QueueUtils.getQueueName(taskType, domain);
 
 		List<String> taskIds = queue.pop(queueName, count, timeoutInMilliSecond);
+		if (CollectionUtils.isNotEmpty(taskIds)) {
+			edao.updateLastPoll(taskType, domain, workerId);
+			MetricService.getInstance().taskPoll(taskType, workerId, taskIds.size());
+		}
 		List<Task> tasks = new LinkedList<>();
 		for (String taskId : taskIds) {
 			Task task = getTask(taskId);
@@ -129,7 +133,9 @@ public class ExecutionService {
 			task.setStatus(Status.IN_PROGRESS);
 			if (task.getStartTime() == 0) {
 				task.setStartTime(System.currentTimeMillis());
-				MetricService.getInstance().taskWait(task.getTaskDefName(), task.getReferenceTaskName(), task.getQueueWaitTime());
+				MetricService.getInstance().taskWait(task.getTaskDefName(),
+					task.getReferenceTaskName(),
+					task.getQueueWaitTime());
 			}
 			task.setWorkerId(workerId);
 			task.setPollCount(task.getPollCount() + 1);
@@ -137,10 +143,6 @@ public class ExecutionService {
 			taskStatusListener.onTaskStarted(task);
 			tasks.add(task);
 		}
-		if (CollectionUtils.isNotEmpty(taskIds)) {
-			edao.updateLastPoll(taskType, domain, workerId);
-		}
-		MetricService.getInstance().taskPoll(taskType, workerId);
 		return tasks;
 	}
 

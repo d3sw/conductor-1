@@ -55,17 +55,21 @@ public class MetricService {
 	public void serverStarted() {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.server.started");
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
-	public void taskPoll(String taskType, String workerId) {
-		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.task.poll");
-		tags.add("task_type:" + taskType);
-		tags.add("worker:" + workerId);
+	public void taskPoll(String taskType, String workerId, int count) {
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.task.poll");
+		tagsCounter.add("task_type:" + taskType);
+		tagsCounter.add("worker:" + workerId);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
 
-		statsd.incrementCounter(aspect, toArray(tags));
+		Set<String> tagsGauge = new HashSet<>();
+		tagsGauge.add("metric:deluxe.conductor.task.poll.gauge");
+		tagsGauge.add("task_type:" + taskType);
+		tagsGauge.add("worker:" + workerId);
+		statsd.recordGaugeValue(aspect, count, toArray(tagsGauge));
 	}
 
 	public void taskWait(String taskType, String refName, Long waitTime) {
@@ -73,7 +77,6 @@ public class MetricService {
 		tags.add("metric:deluxe.conductor.task.queue.wait.time");
 		tags.add("task_type:" + taskType);
 		tags.add("ref_name:" + refName);
-
 		statsd.recordExecutionTime(aspect, waitTime, toArray(tags));
 	}
 
@@ -97,7 +100,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.event.received");
 		tags.add("subject:" + subject);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -105,7 +107,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.event.published");
 		tags.add("subject:" + subject);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -114,7 +115,6 @@ public class MetricService {
 		tags.add("metric:deluxe.conductor.event.execution.skipped");
 		tags.add("handler:" + handler);
 		tags.add("subject:" + subject);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -124,7 +124,6 @@ public class MetricService {
 		tags.add("handler:" + handler);
 		tags.add("subject:" + subject);
 		tags.add("action:" + actionId);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -150,7 +149,6 @@ public class MetricService {
 		tags.add("handler:" + handler);
 		tags.add("subject:" + subject);
 		tags.add("action:" + actionId);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -159,7 +157,6 @@ public class MetricService {
 		tags.add("metric:deluxe.conductor.event.tags.hit");
 		tags.add("handler:" + handler);
 		tags.add("subject:" + subject);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -168,7 +165,6 @@ public class MetricService {
 		tags.add("metric:deluxe.conductor.event.tags.miss");
 		tags.add("handler:" + handler);
 		tags.add("subject:" + subject);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -176,7 +172,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.start");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -184,7 +179,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.start.failed");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -192,7 +186,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.rerun");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -200,7 +193,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.reset");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -208,7 +200,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.retry");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -216,7 +207,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.restart");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -238,7 +228,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.cancel");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
@@ -246,7 +235,6 @@ public class MetricService {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.force.complete");
 		tags.add("workflow:" + name);
-
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 

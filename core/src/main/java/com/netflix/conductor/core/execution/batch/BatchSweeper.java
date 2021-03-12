@@ -29,6 +29,7 @@ import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.QueueDAO;
 import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.service.MetricService;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -133,7 +134,9 @@ public class BatchSweeper {
 
     private List<TaskGroup> poll(String queueName, String workerId, int count, int timeout, int unackTimeout, int rateLimit) {
         List<String> taskIds = queues.pop(queueName, count, timeout);
-        MetricService.getInstance().taskPoll(queueName, workerId);
+        if (CollectionUtils.isNotEmpty(taskIds)) {
+            MetricService.getInstance().taskPoll(queueName, workerId, taskIds.size());
+        }
 
         Map<String, List<Task>> groups = taskIds.parallelStream()
             .map(taskId -> {
@@ -192,7 +195,9 @@ public class BatchSweeper {
                 task.setStatus(Task.Status.IN_PROGRESS);
                 if (task.getStartTime() == 0) {
                     task.setStartTime(System.currentTimeMillis());
-                    Monitors.recordQueueWaitTime(task.getTaskDefName(), task.getQueueWaitTime());
+                    MetricService.getInstance().taskWait(task.getTaskDefName(),
+                        task.getReferenceTaskName(),
+                        task.getQueueWaitTime());
                 }
                 task.setWorkerId(workerId);
                 task.setPollCount(task.getPollCount() + 1);

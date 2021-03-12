@@ -147,7 +147,9 @@ public class SystemTaskWorkerCoordinator {
 			String name = systemTask.getName();
 			String lockQueue = name.toLowerCase() + ".lock";
 			List<String> polled = taskQueues.pop(name, pollCount, pollTimeout);
-			MetricService.getInstance().taskPoll(systemTask.getName(), workerId);
+			if (CollectionUtils.isNotEmpty(polled)) {
+				MetricService.getInstance().taskPoll(systemTask.getName(), workerId, polled.size());
+			}
 			logger.debug("Polling for {}, got {}", name, polled.size());
 			for(String task : polled) {
 				try {
@@ -156,7 +158,7 @@ public class SystemTaskWorkerCoordinator {
 
 						// This prevents another containers executing the same action
 						// true means this session added the record to lock queue and can start the task
-						long expireTime = systemTask.getRetryTimeInSecond() * 2; // 2 times longer than task retry time
+						long expireTime = systemTask.getRetryTimeInSecond() * 2L; // 2 times longer than task retry time
 						boolean locked = taskQueues.pushIfNotExists(lockQueue, task, expireTime);
 						if (!locked) {
 							logger.warn("Cannot lock the task " + task);
