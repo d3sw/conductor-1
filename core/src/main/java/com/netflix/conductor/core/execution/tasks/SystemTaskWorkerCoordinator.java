@@ -22,7 +22,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
 import com.netflix.conductor.dao.QueueDAO;
-import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.service.MetricService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.log4j.NDC;
@@ -178,7 +177,6 @@ public class SystemTaskWorkerCoordinator {
 			}
 			
 		} catch (Exception e) {
-			Monitors.error(className, "pollAndExecute");
 			logger.error(e.getMessage(), e);
 		}
 	}

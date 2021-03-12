@@ -50,7 +50,6 @@ import com.netflix.conductor.core.utils.QueueUtils;
 import com.netflix.conductor.dao.ExecutionDAO;
 import com.netflix.conductor.dao.MetadataDAO;
 import com.netflix.conductor.dao.QueueDAO;
-import com.netflix.conductor.metrics.Monitors;
 import com.netflix.conductor.service.MetricService;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -367,7 +366,7 @@ public class WorkflowExecutor {
 			edao.updateWorkflow(workflow);
 
 			// metrics
-			Monitors.recordWorkflowRerun(workflow);
+			MetricService.getInstance().workflowRerun(workflow.getWorkflowType());
 
 			// send wf start message
 			workflowStatusListener.onWorkflowStarted(workflow);
@@ -777,7 +776,7 @@ public class WorkflowExecutor {
 			} catch (Exception e) {
 				logger.info("Error workflow " + cancelWorkflow + " failed to start.  reason: " + e.getMessage());
 				workflow.getOutput().put("conductor.cancel_workflow", "Error workflow " + cancelWorkflow + " failed to start.  reason: " + e.getMessage());
-				Monitors.recordWorkflowStartError(cancelWorkflow);
+				MetricService.getInstance().workflowStartFailed(cancelWorkflow);
 			}
 		}
 
@@ -949,7 +948,7 @@ public class WorkflowExecutor {
 						workflow.getWorkflowIds(), workflow.getTraceId());
 				} catch (Exception e) {
 					logger.info("Error workflow " + workflowName + " failed to start. reason: " + e.getMessage(), e);
-					Monitors.recordWorkflowStartError(workflowName);
+					MetricService.getInstance().workflowStartFailed(workflowName);
 				}
 			}
 		}
@@ -999,7 +998,7 @@ public class WorkflowExecutor {
 			} catch (Exception e) {
 				logger.info("Error workflow " + failureWorkflow + " failed to start.  reason: " + e.getMessage());
 				workflow.getOutput().put("conductor.failure_workflow", "Error workflow " + failureWorkflow + " failed to start.  reason: " + e.getMessage());
-				Monitors.recordWorkflowStartError(failureWorkflow);
+				MetricService.getInstance().workflowStartFailed(failureWorkflow);
 			}
 		}
 
@@ -1051,7 +1050,7 @@ public class WorkflowExecutor {
 			}
 			String msg = "Workflow " + wf.getWorkflowId() + " is already completed as " + wf.getStatus() + ", task=" + task.getTaskType() + ",reason=" + wf.getReasonForIncompletion()+",correlationId="+wf.getCorrelationId() + ",contextUser=" + wf.getContextUser()+ ",clientId=" + wf.getClientId();
 			logger.debug(msg);
-			Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), wf.getStatus());
+			//Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), wf.getStatus());
 			return;
 		}
 
@@ -1060,7 +1059,7 @@ public class WorkflowExecutor {
 			queue.remove(QueueUtils.getQueueName(task), result.getTaskId());
 			String msg = "Task is already completed as " + task.getStatus() + "@" + task.getEndTime() + ", workflow status=" + wf.getStatus() + ",workflowId=" + wf.getWorkflowId() + ",taskId=" + task.getTaskId()+",correlationId="+wf.getCorrelationId() + ",contextUser=" + wf.getContextUser()+ ",clientId=" + wf.getClientId();
 			logger.debug(msg);
-			Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), task.getStatus());
+			//Monitors.recordUpdateConflict(task.getTaskType(), wf.getWorkflowType(), task.getStatus());
 			return;
 		}
 
@@ -1294,7 +1293,7 @@ public class WorkflowExecutor {
 
 		edao.updateWorkflow(workflow);
 		// metrics
-		Monitors.recordWorkflowPause(workflow);
+		MetricService.getInstance().workflowPause(workflow.getWorkflowType());
 	}
 
 	public void resumeWorkflow(String workflowId,String correlationId) throws Exception{
@@ -1315,7 +1314,7 @@ public class WorkflowExecutor {
 		}
 		edao.updateWorkflow(workflow);
 		// metrics
-		Monitors.recordWorkflowResume(workflow);
+		MetricService.getInstance().workflowResume(workflow.getWorkflowType());
 		decide(workflowId);
 	}
 
@@ -1389,7 +1388,7 @@ public class WorkflowExecutor {
 			throw new ApplicationException(Code.NOT_FOUND, "No workflow found with id " + workflowId);
 		edao.removeWorkflow(workflowId);
 		// metrics
-		Monitors.recordWorkflowRemove(workflow);
+		MetricService.getInstance().workflowRemove(workflow.getWorkflowType());
 	}
 
 	public void removeWorkflowNotImplemented(String workflowId) {

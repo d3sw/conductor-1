@@ -80,6 +80,14 @@ public class MetricService {
 		statsd.recordExecutionTime(aspect, waitTime, toArray(tags));
 	}
 
+	public void taskTimeout(String taskType, String refName) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.task.timeout");
+		tags.add("task_type:" + taskType);
+		tags.add("ref_name:" + refName);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
 	public void taskComplete(String taskType, String refName, String status, long startTime) {
 		Set<String> tagsCounter = new HashSet<>();
 		tagsCounter.add("metric:deluxe.conductor.task.complete");
@@ -182,6 +190,20 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
+	public void workflowPause(String name) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.workflow.pause");
+		tags.add("workflow:" + name);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
+	public void workflowResume(String name) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.workflow.resume");
+		tags.add("workflow:" + name);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
 	public void workflowRerun(String name) {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.rerun");
@@ -199,6 +221,13 @@ public class MetricService {
 	public void workflowRetry(String name) {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.workflow.retry");
+		tags.add("workflow:" + name);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
+	public void workflowRemove(String name) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.workflow.remove");
 		tags.add("workflow:" + name);
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
