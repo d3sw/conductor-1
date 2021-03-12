@@ -194,10 +194,13 @@ public class BatchSweeper {
                 task.setStatus(Task.Status.IN_PROGRESS);
                 if (task.getStartTime() == 0) {
                     task.setStartTime(System.currentTimeMillis());
-                    MetricService.getInstance().taskWait(task.getTaskType(),
-                        task.getReferenceTaskName(),
-                        task.getQueueWaitTime());
                 }
+
+                // Metrics
+                MetricService.getInstance().taskWait(task.getTaskType(),
+                    task.getReferenceTaskName(),
+                    task.getQueueWaitTime());
+
                 task.setWorkerId(workerId);
                 task.setPollCount(task.getPollCount() + 1);
                 workflowExecutor.updateTask(task);

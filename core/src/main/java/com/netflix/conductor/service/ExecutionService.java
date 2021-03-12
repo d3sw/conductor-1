@@ -133,12 +133,15 @@ public class ExecutionService {
 			task.setStatus(Status.IN_PROGRESS);
 			if (task.getStartTime() == 0) {
 				task.setStartTime(System.currentTimeMillis());
-				MetricService.getInstance().taskWait(task.getTaskDefName(),
-					task.getReferenceTaskName(),
-					task.getQueueWaitTime());
 			}
 			task.setWorkerId(workerId);
 			task.setPollCount(task.getPollCount() + 1);
+
+			// Metrics
+			MetricService.getInstance().taskWait(task.getTaskType(),
+				task.getReferenceTaskName(),
+				task.getQueueWaitTime());
+
 			edao.updateTask(task);
 			taskStatusListener.onTaskStarted(task);
 			tasks.add(task);

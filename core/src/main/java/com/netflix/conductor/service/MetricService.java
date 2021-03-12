@@ -58,6 +58,20 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
+	public void systemWorkersQueueFull(String taskType) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.system.workers.queue.full");
+		tags.add("task_type:" + taskType);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
+	public void taskLockFailed(String taskType) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.task.lock.failed");
+		tags.add("task_type:" + taskType);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
 	public void taskPoll(String taskType, String workerId, int count) {
 		Set<String> tagsCounter = new HashSet<>();
 		tagsCounter.add("metric:deluxe.conductor.task.poll");
@@ -126,12 +140,28 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
+	public void eventExecutionFailed(String handler, String subject) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.event.execution.failed");
+		tags.add("handler:" + handler);
+		tags.add("subject:" + subject);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
 	public void eventActionSkipped(String handler, String subject, String actionId) {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.event.action.skipped");
 		tags.add("handler:" + handler);
 		tags.add("subject:" + subject);
 		tags.add("action:" + actionId);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
+	public void eventRedeliveryRequested(String handler, String subject) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.event.redelivery.requested");
+		tags.add("handler:" + handler);
+		tags.add("subject:" + subject);
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 

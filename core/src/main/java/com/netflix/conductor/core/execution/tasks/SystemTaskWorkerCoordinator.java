@@ -147,7 +147,7 @@ public class SystemTaskWorkerCoordinator {
 			String lockQueue = name.toLowerCase() + ".lock";
 			List<String> polled = taskQueues.pop(name, pollCount, pollTimeout);
 			if (CollectionUtils.isNotEmpty(polled)) {
-				MetricService.getInstance().taskPoll(systemTask.getName(), workerId, polled.size());
+				MetricService.getInstance().taskPoll(name, workerId, polled.size());
 			}
 			logger.debug("Polling for {}, got {}", name, polled.size());
 			for(String task : polled) {
@@ -161,6 +161,7 @@ public class SystemTaskWorkerCoordinator {
 						boolean locked = taskQueues.pushIfNotExists(lockQueue, task, expireTime);
 						if (!locked) {
 							logger.warn("Cannot lock the task " + task);
+							MetricService.getInstance().taskLockFailed(name);
 							return;
 						}
 
@@ -173,6 +174,7 @@ public class SystemTaskWorkerCoordinator {
 					});
 				}catch(RejectedExecutionException ree) {
 					logger.warn("Queue full for workers {}, taskId {}", workerQueue.size(), task);
+					MetricService.getInstance().systemWorkersQueueFull(name);
 				}
 			}
 			

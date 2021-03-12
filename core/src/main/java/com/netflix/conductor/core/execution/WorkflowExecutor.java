@@ -1090,7 +1090,7 @@ public class WorkflowExecutor {
 			edao.updateTask(task);
 		}
 		if (task.isTerminal()) {
-			MetricService.getInstance().taskComplete(task.getTaskDefName(),
+			MetricService.getInstance().taskComplete(task.getTaskType(),
 				task.getReferenceTaskName(),
 				task.getStatus().name(),
 				task.getStartTime());
@@ -1457,11 +1457,14 @@ public class WorkflowExecutor {
 			task.setStarted(true);
 			if (task.getStartTime() == 0) {
 				task.setStartTime(System.currentTimeMillis());
-				MetricService.getInstance().taskWait(task.getTaskDefName(),
-					task.getReferenceTaskName(),
-					task.getQueueWaitTime());
 			}
 			task.setPollCount(task.getPollCount() + 1);
+
+			// Metrics
+			MetricService.getInstance().taskWait(task.getTaskType(),
+				task.getReferenceTaskName(),
+				task.getQueueWaitTime());
+
 			edao.updateTask(task);
 
 			switch (task.getStatus()) {

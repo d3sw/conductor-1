@@ -403,7 +403,7 @@ public class DeciderService {
 		}
 
 		String reason = "Task timed out after " + elapsedTime + " millisecond.  Timeout configured as " + timeout;
-		MetricService.getInstance().taskTimeout(task.getTaskType(), task.getTaskDefName());
+		MetricService.getInstance().taskTimeout(task.getTaskType(), task.getReferenceTaskName());
 		
 		switch (taskType.getTimeoutPolicy()) {
 		case ALERT_ONLY:
