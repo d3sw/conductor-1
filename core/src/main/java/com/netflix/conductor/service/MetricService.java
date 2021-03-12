@@ -270,17 +270,20 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tagsCounter));
 		
 		Set<String> tagsGauge = new HashSet<>();
-		tagsGauge.add("metric:deluxe.conductor.queue.count.gauge");
+		tagsGauge.add("metric:deluxe.conductor.queue.gauge");
 		tagsGauge.add("queue:" + queue);
 		statsd.recordGaugeValue(aspect, count, toArray(tagsGauge));
 	}
 
 	public void workflowGauge(String workflow, Long count) {
-		Set<String> tags = new HashSet<>();
-		tags.add("metric:deluxe.conductor.workflow.running.count");
-		tags.add("workflow:" + workflow);
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.workflow.running.count");
+		tagsCounter.add("workflow:" + workflow);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
 
-		statsd.incrementCounter(aspect, toArray(tags));
-		statsd.recordGaugeValue(aspect, count, toArray(tags));
+		Set<String> tagsGauge = new HashSet<>();
+		tagsGauge.add("metric:deluxe.conductor.workflow.running.gauge");
+		tagsGauge.add("workflow:" + workflow);
+		statsd.recordGaugeValue(aspect, count, toArray(tagsGauge));
 	}
 }
