@@ -126,6 +126,7 @@ public class ExecutionService {
 			}
 
 			if (edao.exceedsInProgressLimit(task)) {
+				MetricService.getInstance().taskRateLimited(task.getTaskType(), task.getReferenceTaskName());
 				continue;
 			}
 

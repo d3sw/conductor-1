@@ -109,6 +109,14 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
+	public void taskRateLimited(String taskType, String refName) {
+		Set<String> tags = new HashSet<>();
+		tags.add("metric:deluxe.conductor.task.rate.limit");
+		tags.add("task_type:" + taskType);
+		tags.add("ref_name:" + refName);
+		statsd.incrementCounter(aspect, toArray(tags));
+	}
+
 	public void taskComplete(String taskType, String refName, String status, long startTime) {
 		Set<String> tagsCounter = new HashSet<>();
 		tagsCounter.add("metric:deluxe.conductor.task.complete");
