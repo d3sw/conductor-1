@@ -47,7 +47,7 @@ public class ErrorLookupTask extends WorkflowSystemTask {
                 error = getFormattedError(errorLookup.get());
             }
         }catch(Exception ex){
-            error = "Error occured when trying to lookup the detailed message. " + ex.getMessage();
+            error = "Error occurred when trying to lookup the detailed message. " + ex.getMessage();
         }
         task.getOutputData().put("error", error);
         task.setStatus(Task.Status.COMPLETED);
