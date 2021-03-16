@@ -65,6 +65,13 @@ public class MetricService {
 		statsd.incrementCounter(aspect, toArray(tags));
 	}
 
+	public void queuePop(String queueName) {
+		Set<String> tagsCounter = new HashSet<>();
+		tagsCounter.add("metric:deluxe.conductor.queue.poll");
+		tagsCounter.add("queue_name:" + queueName);
+		statsd.incrementCounter(aspect, toArray(tagsCounter));
+	}
+
 	public void taskLockFailed(String taskType) {
 		Set<String> tags = new HashSet<>();
 		tags.add("metric:deluxe.conductor.task.lock.failed");
