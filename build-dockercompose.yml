@@ -24,4 +24,4 @@ services:
         SONAR_HOST: ${SONAR_HOST}
         SONAR_LOGIN: ${SONAR_LOGIN}
         SONAR_BRANCH: ${SONAR_BRANCH:-master}
-        SONAR_ENABLED: ${SONAR_ENABLED}
+        SONAR_ENABLED: ${SONAR_ENABLED:-0}
