@@ -2,7 +2,7 @@ FROM java:8-jdk as builder
 WORKDIR /stage
 ADD . /stage
 
-RUN cd /stage && ./gradlew build -x test
+RUN ./gradlew build -x test
 
 #
 # conductor:archiver - Deluxe conductor archiver
