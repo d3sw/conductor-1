@@ -24,4 +24,4 @@ services:
         SONAR_HOST: https://sonarqube.dmlib.de
         SONAR_LOGIN: ${SONAR_LOGIN}
         SONAR_BRANCH: ${SONAR_BRANCH:-master}
-        SONAR_ENABLED: ${SONAR_ENABLED:-0}
+        SONAR_ENABLED: 0
