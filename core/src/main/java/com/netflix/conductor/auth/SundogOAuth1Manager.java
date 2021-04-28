@@ -45,12 +45,9 @@ public class SundogOAuth1Manager implements OAuth1Manager {
 
     @Override
     public Pair<OAuthParameters, OAuthSecrets> getAccessToken() {
+        // TODO Honor TTL response field for both request/access tokens
         Pair<String, String> requestToken = getTokenInternal(authUrl + "/request_token", null, null);
-        System.out.println("requestToken = " + requestToken);
-
         Pair<String, String> accessToken = getTokenInternal(authUrl + "/access_token", requestToken.getLeft(), requestToken.getRight());
-        System.out.println("accessToken = " + accessToken);
-
         return getParamsAndSecrets(accessToken.getLeft(), accessToken.getRight());
     }
 
@@ -91,16 +88,4 @@ public class SundogOAuth1Manager implements OAuth1Manager {
             .map(s -> s.split("=", 2))
             .collect(Collectors.toMap(a -> a[0], a -> a.length > 1 ? a[1] : ""));
     }
-
-//    public static void main(String[] args) {
-//        SundogOAuth1Manager manager = new SundogOAuth1Manager(new ConductorConfig());
-//        Pair<OAuthParameters, OAuthSecrets> pair = manager.getAccessToken();
-//        ApacheHttpClient4 client = ApacheHttpClient4.create();
-//        client.addFilter(new OAuthClientFilter(client.getProviders(), pair.getLeft(), pair.getRight()));
-//        WebResource.Builder builder = client.resource("https://cadmium.sundogmediatoolkit.com/v1/assets").getRequestBuilder();
-//        ClientResponse cr = builder.method("GET", ClientResponse.class);
-//        System.out.println("status = " + cr.getStatus());
-//        String assets = cr.getEntity(String.class);
-//        System.out.println("assets = " + assets);
-//    }
 }
