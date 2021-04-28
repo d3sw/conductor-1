@@ -3,6 +3,8 @@ dependencies {
 	compile project(':conductor-common')
 	compile project(':conductor-correlation')
 
+	compile 'com.sun.jersey.contribs.jersey-oauth:oauth-client:1.19.4'
+	compile 'com.sun.jersey.contribs.jersey-oauth:oauth-signature:1.19.4'
 	compile 'com.datadoghq:dd-trace-api:0.46.0'
 	compile 'com.datadoghq:java-dogstatsd-client:2.11.0'
 	compile 'io.reactivex:rxjava:1.2.2'

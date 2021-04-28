@@ -21,6 +21,7 @@ package com.netflix.conductor.contribs;
 import com.google.inject.AbstractModule;
 import com.netflix.conductor.auth.AuthManager;
 import com.netflix.conductor.auth.ForeignAuthManager;
+import com.netflix.conductor.auth.SundogOAuth1Manager;
 import com.netflix.conductor.contribs.auth.AuthTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ public class AuthModule extends AbstractModule {
 
 	@Override
 	protected void configure() {
+		bind(SundogOAuth1Manager.class).asEagerSingleton();
 		bind(ForeignAuthManager.class).asEagerSingleton();
 		bind(AuthManager.class).asEagerSingleton();
 		bind(AuthTask.class).asEagerSingleton();

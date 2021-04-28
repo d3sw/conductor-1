@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.conductor.auth.AuthManager;
 import com.netflix.conductor.auth.ForeignAuthManager;
+import com.netflix.conductor.auth.SundogOAuth1Manager;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.metadata.tasks.Task.Status;
 import com.netflix.conductor.common.metadata.workflow.WorkflowDef;
@@ -77,6 +78,8 @@ public class TestHttpTask {
 
 	private ForeignAuthManager foreignAuthManager = mock(ForeignAuthManager.class);
 
+	private SundogOAuth1Manager sundogOAuth1Manager = mock(SundogOAuth1Manager.class);
+
 	private Workflow workflow = new Workflow();
 	
 	private static Server server;
@@ -113,7 +116,7 @@ public class TestHttpTask {
 		Configuration config = mock(Configuration.class);
 		when(config.getServerId()).thenReturn("test_server_id");
 		RestClientManager rcm = new RestClientManager();
-		httpTask = new HttpTask(rcm, config, new ObjectMapper(), authManager, foreignAuthManager);
+		httpTask = new HttpTask(rcm, config, new ObjectMapper(), authManager, foreignAuthManager, sundogOAuth1Manager);
 	}
 	
 	@Test

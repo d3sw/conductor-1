@@ -45,6 +45,8 @@ public class Input {
 
 	private boolean traceId;
 
+	private String authorizeType;
+
 	/**
 	 * @return the method
 	 */
@@ -289,5 +291,19 @@ public class Input {
 	 */
 	public void setAuthorizeHeaders(Map<String, String> authorizeHeaders) {
 		this.authorizeHeaders = authorizeHeaders;
+	}
+
+	/**
+	 * @return Authorize Type (e.g. OAUTH1)
+	 */
+	public String getAuthorizeType() {
+		return authorizeType;
+	}
+
+	/**
+	 * @param authorizeType Authorize Type (e.g. OAUTH1)
+	 */
+	public void setAuthorizeType(String authorizeType) {
+		this.authorizeType = authorizeType;
 	}
 }

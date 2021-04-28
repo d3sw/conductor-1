@@ -4,9 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.netflix.conductor.auth.AuthManager;
-import com.netflix.conductor.auth.AuthResponse;
-import com.netflix.conductor.auth.ForeignAuthManager;
+import com.netflix.conductor.auth.*;
 import com.netflix.conductor.common.metadata.tasks.Task;
 import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.common.run.CommonParams;
@@ -27,6 +25,7 @@ import com.sun.jersey.oauth.signature.OAuthSecrets;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,10 +34,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 class GenericHttpTask extends WorkflowSystemTask {
 	private static final Logger logger = LoggerFactory.getLogger(HttpTask.class);
@@ -55,6 +51,7 @@ class GenericHttpTask extends WorkflowSystemTask {
 	private final boolean traceIdEnabled;
 	private final boolean authContextEnabled;
 	private final ForeignAuthManager foreignAuthManager;
+	private final Map<String, OAuth1Manager> oAuth1Managers;
 
 	private final TypeReference<Map<String, Object>> mapOfObj = new TypeReference<Map<String, Object>>() {
 	};
@@ -62,7 +59,9 @@ class GenericHttpTask extends WorkflowSystemTask {
 	private final TypeReference<List<Object>> listOfObj = new TypeReference<List<Object>>() {
 	};
 
-	GenericHttpTask(String name, Configuration config, RestClientManager rcm, ObjectMapper om, AuthManager authManager, ForeignAuthManager foreignAuthManager) {
+	GenericHttpTask(String name, Configuration config, RestClientManager rcm, ObjectMapper om,
+					AuthManager authManager, ForeignAuthManager foreignAuthManager,
+					SundogOAuth1Manager sundogOAuth1Manager) {
 		super(name);
 		this.config = config;
 		this.rcm = rcm;
@@ -71,6 +70,7 @@ class GenericHttpTask extends WorkflowSystemTask {
 		this.foreignAuthManager = foreignAuthManager;
 		this.traceIdEnabled = Boolean.parseBoolean(config.getProperty("workflow.traceid.enabled", "false"));
 		this.authContextEnabled = Boolean.parseBoolean(config.getProperty("workflow.authcontext.enabled", "false"));
+		this.oAuth1Managers = Collections.singletonMap("sundog", sundogOAuth1Manager);
 	}
 
 	String lookup(String service) {
@@ -111,7 +111,6 @@ class GenericHttpTask extends WorkflowSystemTask {
 		responsehttp.statusCode = response.getStatus();
 		responsehttp.headers = response.getHeaders();
 		return responsehttp;
-
 	}
 
 	/**
@@ -135,8 +134,12 @@ class GenericHttpTask extends WorkflowSystemTask {
 			builder.entity(input.getBody());
 		}
 
+		// OAuth1 type
+		if ("oauth1".equalsIgnoreCase(input.getAuthorizeType())) {
+			setOAuth1Token(client, input);
+		}
 		// Attach the Authorization header by adding entry to the input's headers
-		if (input.isAuthorize()) {
+		else if (input.isAuthorize()) {
 			setAuthToken(input, workflow);
 		}
 
@@ -250,6 +253,19 @@ class GenericHttpTask extends WorkflowSystemTask {
 			Correlator correlator = new Correlator(logger, workflow.getCorrelationId());
 			correlator.attach(input.getHeaders());
 		}
+	}
+
+	private void setOAuth1Token(Client client, Input input) {
+		String authorizeParty = input.getAuthorizeParty();
+		if (StringUtils.isEmpty(authorizeParty))
+			throw new RuntimeException("No authorize party provided in task definition");
+
+		OAuth1Manager oAuth1Manager = oAuth1Managers.get(authorizeParty.toLowerCase());
+		if (oAuth1Manager == null)
+			throw new RuntimeException("No OAuth1 Manager mapping for " + authorizeParty + " authorize party");
+
+		Pair<OAuthParameters, OAuthSecrets> accessToken = oAuth1Manager.getAccessToken();
+		client.addFilter(new OAuthClientFilter(client.getProviders(), accessToken.getLeft(), accessToken.getRight()));
 	}
 
 	private void setAuthToken(Input input, Workflow workflow) throws Exception {
