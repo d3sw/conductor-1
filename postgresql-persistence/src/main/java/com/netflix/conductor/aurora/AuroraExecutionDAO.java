@@ -488,7 +488,7 @@ public class AuroraExecutionDAO extends AuroraBaseDAO implements ExecutionDAO {
 		payload.put(name, value);
 
 		String SQL = "UPDATE workflow " +
-				"SET json_data=jsonb_set(json_data::jsonb, '{attributes}', (json_data::jsonb->'attributes')::jsonb || ?::jsonb)::text " +
+				"SET json_data=jsonb_set(json_data::jsonb, '{attributes}', coalesce(json_data::jsonb->'attributes','{}')::jsonb || ?::jsonb)::text " +
 				"WHERE workflow_id = ?";
 		executeWithTransaction(SQL, q -> q
 				.addJsonParameter(payload)
