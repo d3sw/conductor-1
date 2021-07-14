@@ -14,22 +14,22 @@ import javax.sql.DataSource;
 
 @Singleton
 public class ServerShutdown {
-	private static Logger logger = LoggerFactory.getLogger(ServerShutdown.class);
-	private EventProcessor eventProcessor;
-	private WorkflowSweeper workflowSweeper;
-	private SystemTaskWorkerCoordinator taskWorkerCoordinator;
-	private BatchSweeper batchSweeper;
-	private DataSource dataSource;
+	private static final Logger logger = LoggerFactory.getLogger(ServerShutdown.class);
+	private final SystemTaskWorkerCoordinator taskWorkerCoordinator;
+	private final WorkflowSweeper workflowSweeper;
+	private final EventProcessor eventProcessor;
+	private final BatchSweeper batchSweeper;
+	private final DataSource dataSource;
 
 	@Inject
-	public ServerShutdown(EventProcessor eventProcessor,
+	public ServerShutdown(SystemTaskWorkerCoordinator taskWorkerCoordinator,
 						  WorkflowSweeper workflowSweeper,
-						  SystemTaskWorkerCoordinator taskWorkerCoordinator,
+						  EventProcessor eventProcessor,
 						  BatchSweeper batchSweeper,
 						  DataSource dataSource) {
-		this.eventProcessor = eventProcessor;
-		this.workflowSweeper = workflowSweeper;
 		this.taskWorkerCoordinator = taskWorkerCoordinator;
+		this.workflowSweeper = workflowSweeper;
+		this.eventProcessor = eventProcessor;
 		this.batchSweeper = batchSweeper;
 		this.dataSource = dataSource;
 
