@@ -49,7 +49,7 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 	private LinkedBlockingDeque<LogEntry> buffer = new LinkedBlockingDeque<>();
 	private AtomicBoolean initialized = new AtomicBoolean(false);
 	private ScheduledExecutorService execs;
-	private DataSource dataSource;
+	private HikariDataSource dataSource;
 	private String hostname;
 	private String fromhost;
 	private String allocId;
@@ -140,10 +140,15 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 	}
 
 	public void close() {
+		System.out.println("Closing db log appender");
 		execs.shutdown();
 		try {
 			execs.awaitTermination(5, TimeUnit.SECONDS);
 		} catch (InterruptedException ignore) {
+		}
+		try {
+			dataSource.close();
+		} catch (Exception ignore) {
 		}
 		this.closed = true;
 	}
