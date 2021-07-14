@@ -99,14 +99,13 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 				poolConfig.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
 
 				dataSource = new HikariDataSource(poolConfig);
-//				Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-//					try {
-//						System.out.println("Closing log dataSource");
-//						dataSource.close();
-//					} catch (Exception e) {
-//						e.printStackTrace();
-//					}
-//				}));
+				Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+					try {
+						this.close();
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+				}));
 			}
 
 			initialized.set(true);
@@ -152,6 +151,11 @@ public class DeluxeAuroraAppender extends AppenderSkeleton {
 		try {
 			execs.awaitTermination(5, TimeUnit.SECONDS);
 		} catch (InterruptedException ignore) {
+		}
+		try {
+			System.out.println("Closing log4j data source");
+			dataSource.close();
+		} catch (Exception ignore) {
 		}
 		this.closed = true;
 	}

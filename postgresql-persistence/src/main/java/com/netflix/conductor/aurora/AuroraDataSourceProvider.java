@@ -11,7 +11,6 @@ import java.net.UnknownHostException;
 
 public class AuroraDataSourceProvider implements Provider<HikariDataSource> {
 	private final Configuration config;
-	private HikariDataSource dataSource;
 
 	@Inject
 	public AuroraDataSourceProvider(Configuration config) {
@@ -43,16 +42,7 @@ public class AuroraDataSourceProvider implements Provider<HikariDataSource> {
 		poolConfig.setConnectionTimeout(config.getIntProperty("aurora.core.connect.timeout", 30) * 1000L);
 		poolConfig.setLeakDetectionThreshold(config.getIntProperty("aurora.core.leakDetection.timeout", 0) * 1000L);
 
-		dataSource = new HikariDataSource(poolConfig);
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			try {
-				System.out.println("Closing primary dataSource");
-				dataSource.close();
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}));
-		return dataSource;
+		return new HikariDataSource(poolConfig);
 	}
 
 	private String getHostName() {

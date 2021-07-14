@@ -28,6 +28,7 @@ import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.config.CoreModule;
 import com.netflix.conductor.core.execution.TaskStatusListener;
 import com.netflix.conductor.core.execution.WorkflowStatusListener;
+import com.netflix.conductor.core.execution.WorkflowSweeper;
 import com.netflix.conductor.core.utils.PriorityLookup;
 import com.netflix.conductor.dao.*;
 import com.netflix.conductor.dao.dynomite.DynoProxy;
@@ -140,6 +141,7 @@ public class ServerModule extends AbstractModule {
 		new ValidationTask();
 		bind(TaskStatusListener.class).to(StatusEventPublisher.class);
 		bind(WorkflowStatusListener.class).to(StatusEventPublisher.class);
+		bind(ServerShutdown.class).asEagerSingleton();
 	}
 
 	@Provides
