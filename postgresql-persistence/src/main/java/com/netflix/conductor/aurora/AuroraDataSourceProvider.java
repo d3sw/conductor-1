@@ -46,6 +46,7 @@ public class AuroraDataSourceProvider implements Provider<HikariDataSource> {
         dataSource = new HikariDataSource(poolConfig);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
+                System.out.println("Closing primary dataSource");
                 dataSource.close();
             } catch (Exception e) {
                 e.printStackTrace();
