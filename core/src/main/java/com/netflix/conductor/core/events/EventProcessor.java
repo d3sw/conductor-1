@@ -184,19 +184,23 @@ public class EventProcessor {
 	}
 
 	public void shutdown() {
-		logger.info("Closing refresh pool");
 		try {
-			refreshPool.shutdown();
-			refreshPool.awaitTermination(5, TimeUnit.SECONDS);
+			if (refreshPool != null) {
+				logger.info("Closing refresh pool");
+				refreshPool.shutdown();
+				refreshPool.awaitTermination(5, TimeUnit.SECONDS);
+			}
 		} catch (Exception e) {
 			logger.debug("Closing refresh pool failed " + e.getMessage(), e);
 		}
-		logger.info("Closing queues & executors");
 		try {
-			queuesMap.entrySet().parallelStream().forEach(entry -> {
-				closeQueue(entry.getKey());
-				closeExecutor(entry.getKey(), entry.getValue().getRight());
-			});
+			if (!queuesMap.isEmpty()) {
+				logger.info("Closing queues & executors");
+				queuesMap.entrySet().parallelStream().forEach(entry -> {
+					closeQueue(entry.getKey());
+					closeExecutor(entry.getKey(), entry.getValue().getRight());
+				});
+			}
 		} catch (Exception e) {
 			logger.debug("Closing queues & executors failed " + e.getMessage(), e);
 		}
