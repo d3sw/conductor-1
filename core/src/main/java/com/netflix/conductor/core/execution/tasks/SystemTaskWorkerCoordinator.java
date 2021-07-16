@@ -180,7 +180,7 @@ public class SystemTaskWorkerCoordinator {
 			if (CollectionUtils.isNotEmpty(polled)) {
 				MetricService.getInstance().taskPoll(name, workerId, polled.size());
 			}
-			logger.debug("Polling for {}, got {}", name, polled.size());
+			logger.trace("Polling for {}, got {}", name, polled.size());
 			for(String task : polled) {
 				try {
 					es.submit(()-> {

@@ -27,6 +27,7 @@ import com.netflix.conductor.common.run.Workflow;
 import com.netflix.conductor.core.config.Configuration;
 import com.netflix.conductor.core.events.ScriptEvaluator;
 import com.netflix.conductor.core.execution.WorkflowExecutor;
+import datadog.trace.api.Trace;
 import org.apache.commons.lang3.StringUtils;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -34,14 +35,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import datadog.trace.api.Trace;
 /**
  * @author Viren Task that enables calling another http endpoint as part of its
  *         execution
@@ -71,12 +69,15 @@ public class HttpTask extends GenericHttpTask {
 		String hostAndPort = null;
 		Input input = om.convertValue(request, Input.class);
 
+		long sd_took_time = -1;
 		if (request == null) {
 			task.setReasonForIncompletion(MISSING_REQUEST);
 			task.setStatus(Status.FAILED);
 			return;
 		} else if (StringUtils.isNotEmpty(input.getServiceDiscoveryQuery())) {
+			long sd_start_time = System.currentTimeMillis();
 			hostAndPort = lookup(input.getServiceDiscoveryQuery());
+			sd_took_time = System.currentTimeMillis() - sd_start_time;
 
 			if (null == hostAndPort) {
 				final String msg = "Service discovery failed for: " + input.getServiceDiscoveryQuery()
@@ -122,9 +123,14 @@ public class HttpTask extends GenericHttpTask {
 
 		try {
 			HttpResponse response = new HttpResponse();
-			logger.debug("http task started.workflowId=" + workflow.getWorkflowId() + ",correlationId="
-					+ workflow.getCorrelationId() + ",traceId=" + workflow.getTraceId() + ",taskId=" + task.getTaskId()
-					+ ",taskreference name=" + task.getReferenceTaskName() + ",url=" + input.getUri()
+			logger.debug("http task starting. WorkflowId=" + workflow.getWorkflowId()
+					+ ",taskReferenceName=" + task.getReferenceTaskName()
+					+ ",service=" + input.getServiceDiscoveryQuery()
+					+ ",taskId=" + task.getTaskId()
+					+ ",url=" + input.getUri()
+					+ ",dns sd took=" + sd_took_time + " ms"
+					+ ",correlationId=" + workflow.getCorrelationId()
+					+ ",traceId=" + workflow.getTraceId()
 					+ ",contextUser=" + workflow.getContextUser());
 			if (input.getContentType() != null) {
 				if (input.getContentType().equalsIgnoreCase("application/x-www-form-urlencoded")) {
@@ -144,11 +150,16 @@ public class HttpTask extends GenericHttpTask {
 				response = httpCall(input, task, workflow, executor);
 			}
 
-			logger.info("http task execution completed.workflowId=" + workflow.getWorkflowId() + ",CorrelationId="
-					+ workflow.getCorrelationId() + ",traceId=" + workflow.getTraceId() + ",taskId=" + task.getTaskId()
-					+ ",taskreference name=" + task.getReferenceTaskName() + ",url=" + input.getUri()
-					+ ",response code=" + response.statusCode
-					+ ",contextUser=" + workflow.getContextUser()+ ",body="+ input.getBody());
+			logger.info("http task completed. WorkflowId=" + workflow.getWorkflowId()
+					+ ",taskReferenceName=" + task.getReferenceTaskName()
+					+ ",service=" + input.getServiceDiscoveryQuery()
+					+ ",taskId=" + task.getTaskId()
+					+ ",url=" + input.getUri()
+					+ ",statusCode=" + response.statusCode
+					+ ",correlationId=" + workflow.getCorrelationId()
+					+ ",contextUser=" + workflow.getContextUser()
+					+ ",traceId=" + workflow.getTraceId()
+					+ ",request=" + input.getBody());
 
 			// true - means status been handled, otherwise should apply the original logic
 			boolean handled = handleStatusMapping(task, response);
@@ -174,10 +185,13 @@ public class HttpTask extends GenericHttpTask {
 
 			task.getOutputData().put("response", response.asMap());
 		} catch (Exception ex) {
-			logger.error("http task failed for workflowId=" + workflow.getWorkflowId() + ",correlationId="
-					+ workflow.getCorrelationId() + ",taskId=" + task.getTaskId() + ",taskreference name="
-					+ task.getReferenceTaskName() + ",url=" + input.getUri() + ",contextUser=" + workflow.getContextUser() +
-					" with " + ex.getMessage(), ex);
+			logger.error("http task failed. WorkflowId=" + workflow.getWorkflowId()
+					+ ",taskReferenceName=" + task.getReferenceTaskName()
+					+ ",service=" + input.getServiceDiscoveryQuery()
+					+ ",taskId=" + task.getTaskId()
+					+ ",url=" + input.getUri()
+					+ ",correlationId=" + workflow.getCorrelationId()
+					+ ",contextUser=" + workflow.getContextUser() + " with " + ex.getMessage(), ex);
 			task.setStatus(Status.FAILED);
 			task.setReasonForIncompletion(ex.getMessage());
 			task.getOutputData().put("response", ex.getMessage());
@@ -243,7 +257,7 @@ public class HttpTask extends GenericHttpTask {
 		validate.getConditions().forEach((name, condition) -> {
 			try {
 				Boolean success = ScriptEvaluator.evalBool(condition, responseMap);
-				logger.debug("Evaluation resulted in " + success + " for " + name + "=" + condition);
+				logger.trace("Evaluation resulted in " + success + " for " + name + "=" + condition);
 
 				// Failed ?
 				if (!success) {
